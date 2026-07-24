@@ -174,16 +174,53 @@ export const LocationPickerMap = ({ latitude, longitude, onLocationChange, onCon
     );
   };
 
-// Famous Indian Landmarks & Educational Institutions Quick-Lookup Dictionary
+// Famous Indian Landmarks & Educational Institutions Quick-Lookup Dictionary (Pan-India)
 const FAMOUS_INDIAN_LANDMARKS = [
+  // 🎓 Gujarat Universities & Colleges
   { keywords: ['lj university', 'lj college', 'lj institute', 'lj campus', 'lok jagruti', 'lj engineering'], lat: 22.9878, lon: 72.5020, name: 'L.J. University Campus, S.G. Highway, Ahmedabad, Gujarat' },
   { keywords: ['iim ahmedabad', 'iim-a', 'iim campus', 'iim vastrapur'], lat: 23.0315, lon: 72.5312, name: 'Indian Institute of Management (IIM), Vastrapur, Ahmedabad, Gujarat' },
   { keywords: ['nirma university', 'nirma college', 'nirma campus'], lat: 23.1287, lon: 72.5445, name: 'Nirma University, S.G. Highway, Ahmedabad, Gujarat' },
   { keywords: ['gujarat university', 'gu campus'], lat: 23.0371, lon: 72.5444, name: 'Gujarat University, Navrangpura, Ahmedabad, Gujarat' },
   { keywords: ['parul university'], lat: 22.2887, lon: 73.3634, name: 'Parul University, Vadodara, Gujarat' },
   { keywords: ['gtu', 'gujarat technological university'], lat: 23.1060, lon: 72.5950, name: 'Gujarat Technological University (GTU), Chandkheda, Ahmedabad' },
+  { keywords: ['iit gandhinagar', 'iit gn'], lat: 23.2125, lon: 72.6844, name: 'Indian Institute of Technology (IIT) Gandhinagar, Palaj, Gujarat' },
+  { keywords: ['ms university', 'msu baroda', 'msu vadodara'], lat: 22.3106, lon: 73.1926, name: 'Maharaja Sayajirao University of Baroda, Vadodara, Gujarat' },
+
+  // 🎓 Premier All-India Educational Institutions (IITs, IIMs, AIIMS, Central Varsities)
+  { keywords: ['iit delhi', 'iit d', 'iit hauz khas'], lat: 28.5450, lon: 77.1926, name: 'Indian Institute of Technology (IIT) Delhi, Hauz Khas, New Delhi' },
+  { keywords: ['iit bombay', 'iit b', 'iit powai'], lat: 19.1334, lon: 72.9133, name: 'Indian Institute of Technology (IIT) Bombay, Powai, Mumbai, Maharashtra' },
+  { keywords: ['iit madras', 'iit m', 'iit chennai'], lat: 12.9915, lon: 80.2337, name: 'Indian Institute of Technology (IIT) Madras, Adyar, Chennai, Tamil Nadu' },
+  { keywords: ['iit kharagpur', 'iit kgp'], lat: 22.3193, lon: 87.3099, name: 'Indian Institute of Technology (IIT) Kharagpur, West Bengal' },
+  { keywords: ['iit kanpur', 'iit k'], lat: 26.5123, lon: 80.2329, name: 'Indian Institute of Technology (IIT) Kanpur, Uttar Pradesh' },
+  { keywords: ['iit roorkee'], lat: 29.8649, lon: 77.8965, name: 'Indian Institute of Technology (IIT) Roorkee, Uttarakhand' },
+  { keywords: ['iit guwahati'], lat: 26.1878, lon: 91.6916, name: 'Indian Institute of Technology (IIT) Guwahati, Assam' },
+  { keywords: ['iisc bangalore', 'iisc bengaluru'], lat: 13.0184, lon: 77.5672, name: 'Indian Institute of Science (IISc), Malleshwaram, Bengaluru, Karnataka' },
+  { keywords: ['iim bangalore', 'iim-b'], lat: 12.8948, lon: 77.6006, name: 'Indian Institute of Management (IIM) Bangalore, Bannerghatta Road, Bengaluru' },
+  { keywords: ['iim calcutta', 'iim-c', 'iim kolkata'], lat: 22.4348, lon: 88.3074, name: 'Indian Institute of Management (IIM) Calcutta, Joka, Kolkata' },
+  { keywords: ['iim lucknow', 'iim-l'], lat: 26.9248, lon: 80.9575, name: 'Indian Institute of Management (IIM) Lucknow, Uttar Pradesh' },
+  { keywords: ['iim kozhikode', 'iim-k'], lat: 11.2894, lon: 75.8762, name: 'Indian Institute of Management (IIM) Kozhikode, Kerala' },
+  { keywords: ['iim indore'], lat: 22.6247, lon: 75.8016, name: 'Indian Institute of Management (IIM) Indore, Madhya Pradesh' },
+  { keywords: ['aiims delhi', 'aiims new delhi'], lat: 28.5672, lon: 77.2100, name: 'All India Institute of Medical Sciences (AIIMS), Ansari Nagar, New Delhi' },
+  { keywords: ['du', 'delhi university', 'north campus du'], lat: 28.6892, lon: 77.2106, name: 'University of Delhi (North Campus), New Delhi' },
+  { keywords: ['jnu', 'jawaharlal nehru university'], lat: 28.5400, lon: 77.1670, name: 'Jawaharlal Nehru University (JNU), New Delhi' },
+  { keywords: ['bhu', 'banaras hindu university'], lat: 25.2677, lon: 82.9913, name: 'Banaras Hindu University (BHU), Varanasi, Uttar Pradesh' },
+  { keywords: ['bits pilani'], lat: 28.3639, lon: 75.5869, name: 'BITS Pilani, Vidya Vihar, Pilani, Rajasthan' },
+
+  // ✈️ Major Airports & Transportation Hubs across India
   { keywords: ['ahmedabad airport', 'svpi airport', 'airport ahmedabad'], lat: 23.0772, lon: 72.6347, name: 'Sardar Vallabhbhai Patel International Airport, Ahmedabad' },
+  { keywords: ['delhi airport', 'igi airport', 'indira gandhi airport'], lat: 28.5562, lon: 77.1000, name: 'Indira Gandhi International Airport (DEL), New Delhi' },
+  { keywords: ['mumbai airport', 'csmi airport', 'mumbai t2'], lat: 19.0896, lon: 72.8656, name: 'Chhatrapati Shivaji Maharaj International Airport (BOM), Mumbai' },
+  { keywords: ['bangalore airport', 'kempegowda airport', 'bengaluru airport'], lat: 13.1986, lon: 77.7066, name: 'Kempegowda International Airport (BLR), Bengaluru' },
+  { keywords: ['hyderabad airport', 'rgia', 'shamshabad airport'], lat: 17.2403, lon: 78.4294, name: 'Rajiv Gandhi International Airport (HYD), Shamshabad, Hyderabad' },
+  { keywords: ['chennai airport', 'maa airport'], lat: 12.9941, lon: 80.1709, name: 'Chennai International Airport (MAA), Meenambakkam, Chennai' },
+  { keywords: ['kolkata airport', 'netaji subhash airport'], lat: 22.6547, lon: 88.4467, name: 'Netaji Subhash Chandra Bose International Airport (CCU), Kolkata' },
+  { keywords: ['pune airport'], lat: 18.5822, lon: 73.9197, name: 'Pune Airport (PNQ), Lohegaon, Pune' },
   { keywords: ['kalupur railway station', 'ahmedabad railway station'], lat: 23.0232, lon: 72.6006, name: 'Ahmedabad Junction Railway Station, Kalupur, Ahmedabad' },
+  { keywords: ['new delhi railway station', 'ndls'], lat: 28.6430, lon: 77.2194, name: 'New Delhi Railway Station (NDLS), Paharganj, New Delhi' },
+  { keywords: ['csmt', 'vt station', 'chhatrapati shivaji terminus'], lat: 18.9400, lon: 72.8353, name: 'Chhatrapati Shivaji Maharaj Terminus (CSMT), Fort, Mumbai' },
+  { keywords: ['howrah railway station', 'howrah junction'], lat: 22.5839, lon: 88.3426, name: 'Howrah Junction Railway Station, Howrah, West Bengal' },
+
+  // 🏙️ Famous City Hubs & Commercial Districts (Pan-India)
   { keywords: ['prahlad nagar', 'prahladnagar'], lat: 23.0130, lon: 72.5117, name: 'Prahlad Nagar, S.G. Highway, Ahmedabad, Gujarat' },
   { keywords: ['satellite ahmedabad', 'satellite area'], lat: 23.0300, lon: 72.5180, name: 'Satellite, Ahmedabad, Gujarat' },
   { keywords: ['navrangpura'], lat: 23.0360, lon: 72.5600, name: 'Navrangpura, Ahmedabad, Gujarat' },
@@ -191,9 +228,69 @@ const FAMOUS_INDIAN_LANDMARKS = [
   { keywords: ['bodakdev'], lat: 23.0400, lon: 72.5150, name: 'Bodakdev, S.G. Highway, Ahmedabad, Gujarat' },
   { keywords: ['sg highway', 'sarkhej gandhinagar highway'], lat: 23.0250, lon: 72.5080, name: 'S.G. Highway, Ahmedabad, Gujarat' },
   { keywords: ['science city ahmedabad', 'science city'], lat: 23.0780, lon: 72.5020, name: 'Gujarat Science City, Hebatpur, Ahmedabad, Gujarat' },
+  { keywords: ['connaught place', 'cp delhi'], lat: 28.6315, lon: 77.2167, name: 'Connaught Place (CP), Rajiv Chowk, New Delhi' },
+  { keywords: ['cyber hub', 'cyber city gurgaon'], lat: 28.4950, lon: 77.0895, name: 'DLF Cyber City, Phase 2, Gurugram, Haryana' },
+  { keywords: ['bkc', 'bandra kurla complex'], lat: 19.0657, lon: 72.8687, name: 'Bandra Kurla Complex (BKC), Bandra East, Mumbai' },
+  { keywords: ['indiranagar bangalore', 'indiranagar bengaluru'], lat: 12.9784, lon: 77.6408, name: 'Indiranagar, 100 Feet Road, Bengaluru, Karnataka' },
+  { keywords: ['electronic city bangalore', 'electronic city'], lat: 12.8399, lon: 77.6770, name: 'Electronic City, Bengaluru, Karnataka' },
+  { keywords: ['hitec city', 'cyberabad hyderabad'], lat: 17.4435, lon: 78.3772, name: 'HITEC City, Madhapur, Hyderabad, Telangana' },
+  { keywords: ['viman nagar pune'], lat: 18.5679, lon: 73.9143, name: 'Viman Nagar, Pune, Maharashtra' },
 ];
 
   const [searchError, setSearchError] = useState('');
+
+  // Debounced live suggestion fetch on typing
+  useEffect(() => {
+    if (!searchQuery || searchQuery.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      const cleanQuery = searchQuery.trim().toLowerCase();
+
+      // Check instant landmark dictionary
+      const localMatches = FAMOUS_INDIAN_LANDMARKS.filter((lm) =>
+        lm.keywords.some((kw) => cleanQuery.includes(kw) || kw.includes(cleanQuery))
+      ).map(lm => ({
+        lat: lm.lat,
+        lon: lm.lon,
+        display_name: lm.name,
+        isLocal: true,
+      }));
+
+      try {
+        const dottedQuery = cleanQuery
+          .replace(/\blj\b/gi, 'L.J.')
+          .replace(/\biim\b/gi, 'I.I.M.')
+          .replace(/\biit\b/gi, 'I.I.T.')
+          .replace(/\baiims\b/gi, 'A.I.I.M.S.');
+
+        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(dottedQuery)}&countrycodes=in&addressdetails=1&limit=6`;
+        const res = await fetch(url, {
+          headers: { 'Accept-Language': 'en-US,en;q=0.9' },
+        });
+
+        if (res.ok) {
+          const apiData = await res.json();
+          // Merge local dictionary matches + API results without duplicates
+          const combined = [...localMatches];
+          (apiData || []).forEach(item => {
+            if (!combined.some(c => Math.abs(parseFloat(c.lat) - parseFloat(item.lat)) < 0.005 && Math.abs(parseFloat(c.lon) - parseFloat(item.lon)) < 0.005)) {
+              combined.push(item);
+            }
+          });
+          setSearchResults(combined);
+        } else {
+          setSearchResults(localMatches);
+        }
+      } catch (e) {
+        setSearchResults(localMatches);
+      }
+    }, 280);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // Multi-Strategy Search Area Query (Instant Landmark Dictionary + Acronym Dotted Query + India Nominatim Fallback)
   const executeAreaSearch = async () => {
@@ -201,7 +298,6 @@ const FAMOUS_INDIAN_LANDMARKS = [
 
     setIsSearching(true);
     setSearchError('');
-    setSearchResults([]);
 
     const cleanQuery = searchQuery.trim().toLowerCase();
 
@@ -224,7 +320,12 @@ const FAMOUS_INDIAN_LANDMARKS = [
 
     // Strategy 2: Query Nominatim with Dotted Acronym Variations & India Restriction
     try {
-      const dottedQuery = cleanQuery.replace(/\blj\b/gi, 'L.J.').replace(/\biim\b/gi, 'I.I.M.');
+      const dottedQuery = cleanQuery
+        .replace(/\blj\b/gi, 'L.J.')
+        .replace(/\biim\b/gi, 'I.I.M.')
+        .replace(/\biit\b/gi, 'I.I.T.')
+        .replace(/\baiims\b/gi, 'A.I.I.M.S.');
+
       const searchQueries = [
         `${dottedQuery}, India`,
         `${cleanQuery}, India`,

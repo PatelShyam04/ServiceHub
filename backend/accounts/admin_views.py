@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from .models import CustomUser, CustomerProfile, ProviderProfile
 from services.models import Booking, Category, Service
-from services.serializers import BookingSerializer, CategorySerializer
+from services.serializers import BookingSerializer, CategorySerializer, ServiceSerializer
 from .serializers import ProviderProfileSerializer
 
 class IsSuperUserOrStaff(permissions.BasePermission):
@@ -20,7 +20,7 @@ class AdminStatsAPIView(APIView):
         total_customers = CustomerProfile.objects.count()
         total_bookings = Booking.objects.count()
         
-        from django.db.models import Sum
+        from django.db.models import Sum, Count
         from django.db.models.functions import TruncMonth
         from datetime import timedelta
         from django.utils import timezone
@@ -31,10 +31,33 @@ class AdminStatsAPIView(APIView):
         total_revenue = float(total_revenue_val)
         platform_commission = round(total_revenue * 0.10, 2)  # 10% platform share
 
+        # Booking Status Breakdown
+        status_counts = {
+            'completed': Booking.objects.filter(status='completed').count(),
+            'pending': Booking.objects.filter(status='pending').count(),
+            'accepted': Booking.objects.filter(status='accepted').count(),
+            'cancelled': Booking.objects.filter(status='cancelled').count(),
+        }
+
+        # Top Categories Leaderboard
+        category_qs = (
+            Booking.objects.filter(status='completed')
+            .values('provider_service__service__category__name')
+            .annotate(amount=Sum('provider_service__price'), count=Count('id'))
+            .order_by('-amount')[:5]
+        )
+        top_categories = [
+            {
+                'name': cat['provider_service__service__category__name'] or 'General',
+                'revenue': float(cat['amount'] or 0),
+                'count': cat['count']
+            }
+            for cat in category_qs
+        ]
+
         six_months_ago = timezone.now() - timedelta(days=180)
         recent_bookings = Booking.objects.filter(created_at__gte=six_months_ago, status='completed')
         
-        from django.db.models import Count
         monthly_stats = recent_bookings.annotate(
             month=TruncMonth('created_at')
         ).values('month').annotate(
@@ -45,10 +68,12 @@ class AdminStatsAPIView(APIView):
         monthly_data = []
         for stat in monthly_stats:
             if stat['month']:
+                rev = float(stat['revenue']) if stat['revenue'] else 0
                 monthly_data.append({
                     'month': stat['month'].strftime('%b %Y'),
                     'bookings': stat['booking_count'],
-                    'revenue': float(stat['revenue']) if stat['revenue'] else 0
+                    'revenue': rev,
+                    'commission': round(rev * 0.10, 2)
                 })
 
         return Response({
@@ -58,6 +83,8 @@ class AdminStatsAPIView(APIView):
             'total_bookings': total_bookings,
             'total_revenue': total_revenue,
             'platform_commission': platform_commission,
+            'status_counts': status_counts,
+            'top_categories': top_categories,
             'monthly_data': monthly_data
         })
 

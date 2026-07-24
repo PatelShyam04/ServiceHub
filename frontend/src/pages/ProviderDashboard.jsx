@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import InvoiceModal from '../components/InvoiceModal';
 import ConfirmModal from '../components/ConfirmModal';
 import LocationPickerMap from '../components/LocationPickerMap';
@@ -643,73 +643,7 @@ const ProviderDashboard = () => {
         </div>
       </div>
 
-      {/* Chart & Analytics Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Monthly Revenue Bar Chart */}
-        <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-md flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-title-md text-title-md font-extrabold text-on-background flex items-center gap-2">
-                <span className="material-symbols-outlined text-indigo-600 text-xl">bar_chart</span>
-                Monthly Revenue
-              </h3>
-              <p className="text-xs text-on-surface-variant font-medium mt-0.5">Earnings performance over time</p>
-            </div>
-          </div>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={analyticsData?.monthly_earnings?.length > 0 ? analyticsData.monthly_earnings : earningsData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                <XAxis dataKey={analyticsData?.monthly_earnings?.length > 0 ? "month" : "name"} stroke="#64748b" fontSize={12} />
-                <YAxis stroke="#64748b" fontSize={12} />
-                <Tooltip cursor={{ fill: 'rgba(70, 72, 212, 0.04)' }} formatter={(val) => [`₹${val}`, 'Revenue']} />
-                <Bar dataKey="amount" fill="#4f46e5" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </section>
 
-        {/* Category Breakdown Pie Chart */}
-        <section className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-md flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h3 className="font-title-md text-title-md font-extrabold text-on-background flex items-center gap-2">
-                <span className="material-symbols-outlined text-emerald-600 text-xl">pie_chart</span>
-                Revenue by Category
-              </h3>
-              <p className="text-xs text-on-surface-variant font-medium mt-0.5">Distribution across service types</p>
-            </div>
-          </div>
-          <div className="h-64 w-full flex items-center justify-center">
-            {analyticsData?.category_earnings?.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={analyticsData.category_earnings}
-                    dataKey="amount"
-                    nameKey="category"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    label={({ category, amount }) => `${category}: ₹${amount}`}
-                  >
-                    {analyticsData.category_earnings.map((entry, idx) => (
-                      <Cell key={`cell-${idx}`} fill={['#4f46e5', '#059669', '#d97706', '#db2777', '#7c3aed', '#dc2626'][idx % 6]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(val) => [`₹${val}`, 'Earnings']} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="text-center text-outline text-xs space-y-1">
-                <span className="material-symbols-outlined text-4xl text-indigo-300 block mb-1">donut_large</span>
-                <p className="font-bold">No category data yet</p>
-              </div>
-            )}
-          </div>
-        </section>
-      </div>
 
       {/* Incoming Requests */}
       <section className="space-y-4">
@@ -839,19 +773,30 @@ const ProviderDashboard = () => {
   );
 
   const renderServices = () => (
-    <div className="space-y-stack_lg">
-      <h2 className="font-headline-lg text-headline-lg font-bold text-on-background">Offer Services</h2>
+    <div className="space-y-stack_lg animate-[fadeIn_0.3s_ease-out]">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="font-headline-lg text-headline-lg font-bold text-on-background">Offer Services</h2>
+          <p className="text-sm text-on-surface-variant mt-1">Manage the services you offer and configure your rates.</p>
+        </div>
+        <span className="px-3.5 py-1.5 rounded-full bg-indigo-50 text-indigo-700 font-extrabold text-xs border border-indigo-200 shadow-2xs">
+          {myServices.length} Active Services
+        </span>
+      </div>
       
       {/* Add Service Card */}
-      <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-5 shadow-sm space-y-4">
-        <h3 className="font-title-md text-title-md font-bold text-on-surface">Offer a New Service</h3>
+      <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-md space-y-4">
+        <h3 className="font-title-md text-title-md font-extrabold text-on-surface flex items-center gap-2">
+          <span className="material-symbols-outlined text-indigo-600">add_circle</span>
+          Offer a New Service
+        </h3>
         <form onSubmit={handleAddService} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-bold text-on-surface-variant">Select Category</label>
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Select Category & Service</label>
             <select 
               value={newServiceId} 
               onChange={(e) => setNewServiceId(e.target.value)}
-              className="w-full rounded-lg border border-outline-variant/60 p-2.5 text-sm bg-transparent"
+              className="w-full rounded-2xl border border-slate-300 p-3 text-xs bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all shadow-2xs"
               required
             >
               <option value="">-- Choose a Service --</option>
@@ -864,52 +809,63 @@ const ProviderDashboard = () => {
               ))}
             </select>
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-bold text-on-surface-variant">My Price (₹)</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={newServicePrice}
-              onChange={(e) => setNewServicePrice(e.target.value)}
-              placeholder="e.g. 500"
-              className="w-full rounded-lg border border-outline-variant/60 p-2.5 text-sm bg-transparent"
-              required
-            />
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Hourly Rate (₹)</label>
+            <div className="relative">
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-500 text-xs">₹</span>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newServicePrice}
+                onChange={(e) => setNewServicePrice(e.target.value)}
+                placeholder="e.g. 500"
+                className="w-full rounded-2xl border border-slate-300 pl-8 pr-3.5 py-3 text-xs bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all shadow-2xs font-bold"
+                required
+              />
+            </div>
           </div>
-          <button type="submit" className="w-full bg-primary text-on-primary py-2.5 rounded-lg text-sm font-bold hover:bg-surface-tint transition-colors cursor-pointer shadow-sm h-[42px]">
+          <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-2xl text-xs font-extrabold hover:bg-indigo-700 transition-all cursor-pointer shadow-md hover:shadow-lg flex items-center justify-center gap-2 h-[42px]">
+            <span className="material-symbols-outlined text-[18px]">add</span>
             Add Service
           </button>
         </form>
       </div>
 
       {/* Active Services Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
         {myServices.length === 0 ? (
-          <div className="col-span-full text-center p-12 bg-surface-container-lowest rounded-xl border border-outline-variant/20 shadow-sm">
-            <span className="material-symbols-outlined text-4xl text-outline mb-2">handyman</span>
-            <h4 className="font-bold text-on-surface">No services added</h4>
-            <p className="text-sm text-on-surface-variant">Add the services you offer above so customers can search and book your services.</p>
+          <div className="col-span-full text-center p-12 bg-surface-container-lowest rounded-3xl border border-outline-variant/20 shadow-2xs">
+            <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3">
+              <span className="material-symbols-outlined text-3xl">handyman</span>
+            </div>
+            <h4 className="font-extrabold text-on-surface text-lg">No services added</h4>
+            <p className="text-xs text-on-surface-variant mt-1">Add the services you offer above so customers can search and book your services.</p>
           </div>
         ) : (
           myServices.map(ps => (
-            <div key={ps.id} className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-5 flex flex-col justify-between shadow-sm">
-              <div className="flex justify-between items-start">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center font-bold">
-                  🔨
+            <div key={ps.id} className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 flex flex-col justify-between shadow-2xs hover:shadow-xl transition-all duration-300 group">
+              <div>
+                <div className="flex justify-between items-start">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold shadow-2xs group-hover:scale-110 transition-transform">
+                    <span className="material-symbols-outlined text-2xl">construction</span>
+                  </div>
+                  <span className="bg-indigo-50 text-indigo-700 text-[10px] uppercase font-extrabold px-2.5 py-1 rounded-full border border-indigo-200/60">
+                    {ps.category_name}
+                  </span>
                 </div>
-                <span className="bg-surface-container-high text-on-surface text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">
-                  {ps.category_name}
-                </span>
+                <h3 className="font-title-md text-title-md text-on-surface font-extrabold mt-4 tracking-tight">
+                  {ps.service_details.name}
+                </h3>
               </div>
-              <h3 className="font-title-md text-title-md text-on-surface font-bold mt-4">
-                {ps.service_details.name}
-              </h3>
-              <div className="flex justify-between items-center mt-6 pt-3 border-t border-outline-variant/20">
-                <span className="font-bold text-primary text-lg">₹{ps.price}/hr</span>
+              <div className="flex justify-between items-center mt-6 pt-4 border-t border-outline-variant/20">
+                <div>
+                  <span className="text-[10px] text-slate-400 font-bold uppercase block tracking-wider">Rate</span>
+                  <span className="font-extrabold text-indigo-600 text-lg">₹{ps.price}/hr</span>
+                </div>
                 <button 
                   onClick={() => handleDeleteService(ps.id)} 
-                  className="p-1.5 rounded-full hover:bg-error/5 text-outline hover:text-error transition-colors cursor-pointer"
+                  className="w-9 h-9 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 flex items-center justify-center transition-all cursor-pointer shadow-2xs"
                   title="Remove Service"
                 >
                   <span className="material-symbols-outlined text-[18px]">delete</span>
@@ -923,48 +879,65 @@ const ProviderDashboard = () => {
   );
 
   const renderPortfolio = () => (
-    <div className="space-y-stack_lg">
-      <h2 className="font-headline-lg text-headline-lg font-bold text-on-background">Portfolio Gallery</h2>
+    <div className="space-y-stack_lg animate-[fadeIn_0.3s_ease-out]">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="font-headline-lg text-headline-lg font-bold text-on-background">Portfolio Gallery</h2>
+          <p className="text-sm text-on-surface-variant mt-1">Showcase high-quality photos of your completed projects to earn client trust.</p>
+        </div>
+        <span className="px-3.5 py-1.5 rounded-full bg-indigo-50 text-indigo-700 font-extrabold text-xs border border-indigo-200 shadow-2xs">
+          {profile.gallery_images?.length || 0} Photos Uploaded
+        </span>
+      </div>
       
       {/* Upload Card */}
-      <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-5 shadow-sm space-y-4">
-        <h3 className="font-title-md text-title-md font-bold text-on-surface">Upload Portfolio Image</h3>
+      <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-md space-y-4">
+        <h3 className="font-title-md text-title-md font-extrabold text-on-surface flex items-center gap-2">
+          <span className="material-symbols-outlined text-indigo-600">cloud_upload</span>
+          Upload Portfolio Work
+        </h3>
         <form onSubmit={handleGalleryUpload} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-          <div className="flex flex-col gap-1 md:col-span-2">
-            <label className="text-xs font-bold text-on-surface-variant">Select Image File</label>
+          <div className="flex flex-col gap-1.5 md:col-span-2">
+            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Select Image File</label>
             <input 
               type="file" 
               accept="image/*"
               onChange={(e) => setGalleryFile(e.target.files[0])}
-              className="w-full rounded-lg border border-outline-variant/60 p-2 text-sm bg-transparent cursor-pointer"
+              className="w-full rounded-2xl border border-slate-300 p-2.5 text-xs bg-white text-slate-900 cursor-pointer shadow-2xs"
               required
             />
           </div>
-          <button type="submit" className="w-full bg-primary text-on-primary py-2.5 rounded-lg text-sm font-bold hover:bg-surface-tint transition-colors cursor-pointer shadow-sm">
+          <button type="submit" className="w-full bg-indigo-600 text-white py-3 rounded-2xl text-xs font-extrabold hover:bg-indigo-700 transition-all cursor-pointer shadow-md hover:shadow-lg flex items-center justify-center gap-2 h-[42px]">
+            <span className="material-symbols-outlined text-[18px]">upload</span>
             Upload Work
           </button>
         </form>
       </div>
 
       {/* Gallery Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
         {profile.gallery_images && profile.gallery_images.length === 0 ? (
-          <div className="col-span-full text-center p-12 bg-surface-container-lowest rounded-xl border border-outline-variant/20 shadow-sm">
-            <span className="material-symbols-outlined text-4xl text-outline mb-2">collections</span>
-            <h4 className="font-bold text-on-surface">No images uploaded</h4>
-            <p className="text-sm text-on-surface-variant">Showcase your past work by uploading high-quality images of completed projects.</p>
+          <div className="col-span-full text-center p-12 bg-surface-container-lowest rounded-3xl border border-outline-variant/20 shadow-2xs">
+            <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3">
+              <span className="material-symbols-outlined text-3xl">collections</span>
+            </div>
+            <h4 className="font-extrabold text-on-surface text-lg">No images uploaded</h4>
+            <p className="text-xs text-on-surface-variant mt-1">Showcase your past work by uploading high-quality images of completed projects.</p>
           </div>
         ) : (
           profile.gallery_images && profile.gallery_images.map(img => (
-            <div key={img.id} className="aspect-square rounded-xl overflow-hidden border border-outline-variant/20 relative group shadow-sm">
-              <img src={img.image} alt="Portfolio" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <div key={img.id} className="aspect-square rounded-3xl overflow-hidden border border-slate-200/80 relative group shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer" onClick={() => setActivePhotoModal(img.image)}>
+              <img src={img.image} alt="Portfolio Work" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-3">
+                <span className="text-white text-[11px] font-bold flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px]">zoom_in</span> View
+                </span>
                 <button 
-                  onClick={() => handleDeleteGalleryImage(img.id)}
-                  className="text-white bg-error p-2 rounded-full hover:bg-red-700 cursor-pointer shadow-md"
-                  title="Delete Portfolio Image"
+                  onClick={(e) => { e.stopPropagation(); handleDeleteGalleryImage(img.id); }}
+                  className="text-white bg-red-600 p-2 rounded-xl hover:bg-red-700 cursor-pointer shadow-md transition-colors"
+                  title="Delete Image"
                 >
-                  <span className="material-symbols-outlined text-[20px]">delete</span>
+                  <span className="material-symbols-outlined text-[18px]">delete</span>
                 </button>
               </div>
             </div>
@@ -1007,63 +980,84 @@ const ProviderDashboard = () => {
   };
 
   const renderHistory = () => (
-    <div className="space-y-stack_lg">
-      <div className="flex justify-between items-center">
-        <h2 className="font-headline-lg text-headline-lg font-bold text-on-background">Job History & Earning Logs</h2>
+    <div className="space-y-stack_lg animate-[fadeIn_0.3s_ease-out]">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="font-headline-lg text-headline-lg font-bold text-on-background">Job History & Earning Logs</h2>
+          <p className="text-sm text-on-surface-variant mt-1">Complete record of your past completed and cancelled service jobs.</p>
+        </div>
         {bookings.length > 0 && (
           <button
             onClick={handleExportJobsCSV}
-            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-2xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+            className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-2xl shadow-md transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
           >
             <span className="material-symbols-outlined text-base">download</span>
             <span>Export CSV Log</span>
           </button>
         )}
       </div>
+
       {bookings.filter(b => ['completed', 'cancelled'].includes(b.status)).length === 0 ? (
-        <div className="text-center p-12 bg-surface-container-lowest rounded-xl border border-outline-variant/20 shadow-sm">
-          <span className="material-symbols-outlined text-4xl text-outline mb-2">history</span>
-          <h4 className="font-bold text-on-surface">No job history found</h4>
-          <p className="text-sm text-on-surface-variant">Your completed and cancelled contracts will appear here.</p>
+        <div className="text-center p-12 bg-surface-container-lowest rounded-3xl border border-outline-variant/20 shadow-2xs">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3">
+            <span className="material-symbols-outlined text-3xl">history</span>
+          </div>
+          <h4 className="font-extrabold text-on-surface text-lg">No job history found</h4>
+          <p className="text-xs text-on-surface-variant mt-1">Your completed and cancelled contracts will appear here.</p>
         </div>
       ) : (
         <div className="space-y-4">
           {bookings.filter(b => ['completed', 'cancelled'].includes(b.status)).map(booking => (
-            <div key={booking.id} className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-5 shadow-sm hover:border-primary/20 transition-all">
+            <div key={booking.id} className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-2xs hover:shadow-md transition-all duration-200">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 pb-3 border-b border-outline-variant/10">
                 <div className="flex items-center gap-2">
-                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase ${
+                  <span className={`px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider ${
                     booking.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
                   }`}>
                     {booking.status}
                   </span>
-                  <span className="text-xs font-code-sm text-on-surface-variant font-bold">#BK-{booking.id}</span>
+                  <span className="text-xs text-slate-500 font-bold font-mono">#BK-{booking.id}</span>
                 </div>
-                <span className="text-xs text-on-surface-variant font-medium">
+                <span className="text-xs text-slate-500 font-semibold flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[15px] text-indigo-600">calendar_month</span>
                   {formatBookingDate(booking.booking_date)}
                 </span>
               </div>
               
-              <div className="flex justify-between items-end">
-                <div>
-                  <h3 className="font-title-md text-title-md text-on-surface font-bold">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4">
+                <div className="space-y-1.5">
+                  <h3 className="font-title-md text-title-md text-on-surface font-extrabold tracking-tight">
                     {booking.provider_service_details.service_details.name}
                   </h3>
-                  <p className="text-sm text-on-surface-variant mt-1 font-medium">Customer: {booking.customer_name}</p>
-                  <p className="text-xs text-outline mt-2 flex items-center gap-1 font-medium">
-                    <span className="material-symbols-outlined text-[14px]">location_on</span>
+                  <p className="text-xs text-slate-600 font-bold flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[15px] text-indigo-600">person</span>
+                    Customer: {booking.customer_name}
+                  </p>
+                  <p className="text-xs text-slate-500 font-medium flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-[15px] text-indigo-600">location_on</span>
                     {booking.address}
                   </p>
                 </div>
                 
-                <div className="text-right shrink-0">
-                  <span className="text-xs text-on-surface-variant uppercase font-bold tracking-wider">Payout</span>
-                  <p className="text-lg font-bold text-primary mt-0.5">₹{booking.provider_service_details.price}</p>
-                  <span className={`text-xs font-bold uppercase inline-block mt-1 ${
-                    booking.payment_status === 'paid' ? 'text-emerald-600' : 'text-red-500'
-                  }`}>
-                    {booking.payment_status} {booking.payment_method && `(${booking.payment_method.toUpperCase()})`}
-                  </span>
+                <div className="flex flex-col items-start sm:items-end gap-2 w-full sm:w-auto shrink-0 border-t sm:border-t-0 pt-3 sm:pt-0 border-slate-100">
+                  <div className="text-left sm:text-right">
+                    <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider block">Payout</span>
+                    <p className="text-xl font-extrabold text-indigo-600 mt-0.5">₹{booking.provider_service_details.price}</p>
+                    <span className={`text-[11px] font-bold uppercase inline-block mt-1 px-2.5 py-0.5 rounded-full border ${
+                      booking.payment_status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-600 border-red-200'
+                    }`}>
+                      {booking.payment_status} {booking.payment_method && `(${booking.payment_method.toUpperCase()})`}
+                    </span>
+                  </div>
+                  {booking.status === 'completed' && (
+                    <button 
+                      onClick={() => setSelectedInvoiceBooking(booking)}
+                      className="px-4 py-2 bg-indigo-50 border border-indigo-200 text-indigo-700 font-extrabold text-xs rounded-xl hover:bg-indigo-100 transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                    >
+                      <span className="material-symbols-outlined text-base">receipt_long</span>
+                      <span>Invoice</span>
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -1074,28 +1068,51 @@ const ProviderDashboard = () => {
   );
 
   const renderReviews = () => (
-    <div className="space-y-stack_lg">
-      <h2 className="font-headline-lg text-headline-lg font-bold text-on-background">Customer Reviews</h2>
+    <div className="space-y-stack_lg animate-[fadeIn_0.3s_ease-out]">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="font-headline-lg text-headline-lg font-bold text-on-background">Customer Reviews</h2>
+          <p className="text-sm text-on-surface-variant mt-1">Feedback and ratings left by verified clients after job completion.</p>
+        </div>
+        {reviews.length > 0 && (
+          <span className="px-3.5 py-1.5 rounded-full bg-amber-50 text-amber-800 font-extrabold text-xs border border-amber-200 shadow-2xs flex items-center gap-1">
+            ⭐ {(reviews.reduce((a, r) => a + r.rating, 0) / reviews.length).toFixed(1)} / 5.0 Average
+          </span>
+        )}
+      </div>
+
       {reviews.length === 0 ? (
-        <div className="text-center p-12 bg-surface-container-lowest rounded-xl border border-outline-variant/20 shadow-sm">
-          <span className="material-symbols-outlined text-4xl text-outline mb-2">reviews</span>
-          <h4 className="font-bold text-on-surface">No reviews yet</h4>
-          <p className="text-sm text-on-surface-variant">Complete work on active bookings to build trust and receive reviews from customers.</p>
+        <div className="text-center p-12 bg-surface-container-lowest rounded-3xl border border-outline-variant/20 shadow-2xs">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-3">
+            <span className="material-symbols-outlined text-3xl">reviews</span>
+          </div>
+          <h4 className="font-extrabold text-on-surface text-lg">No reviews yet</h4>
+          <p className="text-xs text-on-surface-variant mt-1">Complete work on active bookings to build trust and receive reviews from customers.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {reviews.map(review => (
-            <div key={review.id} className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-5 shadow-sm space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-secondary font-bold">{'⭐'.repeat(review.rating)}</span>
-                <span className="text-xs text-on-surface-variant">{new Date(review.created_at).toLocaleDateString()}</span>
+            <div key={review.id} className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-2xs hover:shadow-lg transition-all duration-300 flex flex-col justify-between space-y-4">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-1 text-amber-500 text-base font-bold">
+                    {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}
+                    <span className="text-xs text-slate-700 font-extrabold ml-1">{review.rating}.0</span>
+                  </div>
+                  <span className="text-xs text-slate-400 font-medium">{new Date(review.created_at).toLocaleDateString('en-IN', { day:'numeric', month:'short', year:'numeric' })}</span>
+                </div>
+                <p className="text-xs text-slate-700 italic leading-relaxed bg-slate-50/80 p-3.5 rounded-2xl border border-slate-100">
+                  "{review.comment}"
+                </p>
               </div>
-              <p className="text-sm text-on-surface-variant italic leading-relaxed">
-                "{review.comment}"
-              </p>
-              <div className="pt-2 border-t border-outline-variant/10 flex justify-between items-center text-xs">
-                <span className="font-bold text-on-surface">- {review.customer_name}</span>
-                <span className="text-primary font-semibold">{review.service_name}</span>
+              <div className="pt-3 border-t border-slate-100 flex justify-between items-center text-xs font-bold">
+                <span className="text-slate-900 flex items-center gap-1.5">
+                  <span className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-[10px]">
+                    {review.customer_name[0].toUpperCase()}
+                  </span>
+                  {review.customer_name}
+                </span>
+                <span className="text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200/60 text-[11px]">{review.service_name}</span>
               </div>
             </div>
           ))}
@@ -1462,77 +1479,288 @@ const ProviderDashboard = () => {
     </div>
   );
 
+  const renderAnalytics = () => {
+    const statusData = analyticsData?.status_counts ? [
+      { name: 'Completed', value: analyticsData.status_counts.completed, color: '#10b981' },
+      { name: 'Pending', value: analyticsData.status_counts.pending, color: '#f59e0b' },
+      { name: 'Accepted', value: analyticsData.status_counts.accepted, color: '#6366f1' },
+      { name: 'Cancelled', value: analyticsData.status_counts.cancelled, color: '#ef4444' },
+    ].filter(item => item.value > 0) : [];
+
+    const monthlyData = analyticsData?.monthly_earnings || [];
+    const categoryData = analyticsData?.category_earnings || [];
+    const totalCatRevenue = categoryData.reduce((acc, c) => acc + c.amount, 0) || 1;
+
+    return (
+      <div className="space-y-stack_lg animate-[fadeIn_0.3s_ease-out]">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h2 className="font-headline-lg text-headline-lg font-bold text-on-background">Business Analytics & Metrics</h2>
+            <p className="text-sm text-on-surface-variant mt-1">Real-time performance overview, revenue trends, and booking completion rates.</p>
+          </div>
+          <span className="px-3.5 py-1.5 rounded-full bg-indigo-50 text-indigo-700 font-extrabold text-xs border border-indigo-200 shadow-2xs flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[16px] text-indigo-600">monitoring</span>
+            Live Performance Metrics
+          </span>
+        </div>
+
+        {/* ── KPI Cards ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-2xs hover:shadow-lg transition-all duration-300">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-extrabold text-on-surface-variant uppercase tracking-wider">Total Revenue</span>
+              <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-md">
+                <span className="material-symbols-outlined text-lg">payments</span>
+              </div>
+            </div>
+            <div className="text-3xl font-extrabold text-on-surface tracking-tight">₹{(analyticsData?.total_earnings || 0).toFixed(0)}</div>
+            <span className="text-xs text-indigo-600 font-bold mt-1 inline-block">Gross earnings from jobs</span>
+          </div>
+
+          <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-2xs hover:shadow-lg transition-all duration-300">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-extrabold text-on-surface-variant uppercase tracking-wider">Completion Rate</span>
+              <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md">
+                <span className="material-symbols-outlined text-lg">task_alt</span>
+              </div>
+            </div>
+            <div className="text-3xl font-extrabold text-emerald-600 tracking-tight">{analyticsData?.completion_rate || 0}%</div>
+            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-2 overflow-hidden">
+              <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${Math.min(analyticsData?.completion_rate || 0, 100)}%` }} />
+            </div>
+          </div>
+
+          <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-2xs hover:shadow-lg transition-all duration-300">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-extrabold text-on-surface-variant uppercase tracking-wider">Avg. Job Value</span>
+              <div className="w-10 h-10 rounded-2xl bg-violet-600 text-white flex items-center justify-center shadow-md">
+                <span className="material-symbols-outlined text-lg">receipt_long</span>
+              </div>
+            </div>
+            <div className="text-3xl font-extrabold text-on-surface tracking-tight">₹{(analyticsData?.avg_booking_value || 0).toFixed(0)}</div>
+            <span className="text-xs text-violet-600 font-bold mt-1 inline-block">Average per booking</span>
+          </div>
+
+          <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-2xs hover:shadow-lg transition-all duration-300">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-extrabold text-on-surface-variant uppercase tracking-wider">Customer Rating</span>
+              <div className="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md">
+                <span className="material-symbols-outlined text-lg">star</span>
+              </div>
+            </div>
+            <div className="text-3xl font-extrabold text-on-surface tracking-tight flex items-baseline gap-1">
+              {analyticsData?.avg_rating || '—'}
+              <span className="text-sm font-bold text-amber-500">★</span>
+            </div>
+            <span className="text-xs text-amber-600 font-bold mt-1 inline-block">{analyticsData?.total_reviews || 0} reviews</span>
+          </div>
+        </div>
+
+        {/* ── Visual Charts Section ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Monthly Revenue Area Chart */}
+          <div className="lg:col-span-2 bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-md flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="font-bold text-on-surface text-base">Monthly Revenue Trend</h3>
+                <p className="text-xs text-on-surface-variant font-medium">Earnings breakdown by month</p>
+              </div>
+              <span className="text-xs font-bold px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">
+                ₹ Revenue
+              </span>
+            </div>
+            <div className="h-[280px] w-full">
+              {monthlyData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={monthlyData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="providerColorRev" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.4}/>
+                        <stop offset="95%" stopColor="#4f46e5" stopOpacity={0.0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                    <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v}`} />
+                    <Tooltip
+                      formatter={(val) => [`₹${val}`, 'Revenue']}
+                      contentStyle={{ borderRadius: '16px', background: '#0f172a', color: '#fff', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}
+                    />
+                    <Area type="monotone" dataKey="amount" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#providerColorRev)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-slate-400">
+                  <span className="material-symbols-outlined text-4xl mb-2 text-slate-300">show_chart</span>
+                  <p className="text-xs font-semibold">No revenue trend data available yet.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Job Status Distribution Donut Chart */}
+          <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-md flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h3 className="font-bold text-on-surface text-base">Booking Status</h3>
+                <p className="text-xs text-on-surface-variant font-medium">Job distribution breakdown</p>
+              </div>
+            </div>
+
+            <div className="h-[220px] w-full relative flex items-center justify-center">
+              {statusData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={statusData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={55}
+                      outerRadius={80}
+                      paddingAngle={4}
+                      dataKey="value"
+                    >
+                      {statusData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(val, name) => [`${val} jobs`, name]}
+                      contentStyle={{ borderRadius: '12px', background: '#0f172a', color: '#fff', border: 'none' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-center text-slate-400">
+                  <span className="material-symbols-outlined text-4xl mb-1 text-slate-300">pie_chart</span>
+                  <p className="text-xs font-semibold">No booking status metrics.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Status Legend */}
+            <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+              {[
+                { label: 'Completed', count: analyticsData?.status_counts?.completed || 0, color: 'bg-emerald-500' },
+                { label: 'Pending', count: analyticsData?.status_counts?.pending || 0, color: 'bg-amber-500' },
+                { label: 'Accepted', count: analyticsData?.status_counts?.accepted || 0, color: 'bg-indigo-500' },
+                { label: 'Cancelled', count: analyticsData?.status_counts?.cancelled || 0, color: 'bg-red-500' },
+              ].map(item => (
+                <div key={item.label} className="flex items-center justify-between text-xs p-1.5 rounded-lg bg-slate-50">
+                  <span className="flex items-center gap-1.5 text-slate-600 font-semibold">
+                    <span className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
+                    {item.label}
+                  </span>
+                  <span className="font-extrabold text-slate-900">{item.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Category Performance Breakdown */}
+        {categoryData.length > 0 && (
+          <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-md space-y-4">
+            <h3 className="font-bold text-on-surface text-base flex items-center gap-2">
+              <span className="material-symbols-outlined text-indigo-600">category</span>
+              Revenue Breakdown by Category
+            </h3>
+            <div className="space-y-3">
+              {categoryData.map(cat => {
+                const pct = Math.round((cat.amount / totalCatRevenue) * 100);
+                return (
+                  <div key={cat.category} className="space-y-1.5 p-3 rounded-2xl bg-slate-50/80 border border-slate-200/60">
+                    <div className="flex justify-between items-center text-xs font-bold">
+                      <span className="text-slate-800 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-indigo-600" />
+                        {cat.category}
+                      </span>
+                      <span className="text-indigo-700">₹{cat.amount.toFixed(0)} ({cat.count} jobs · {pct}%)</span>
+                    </div>
+                    <div className="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                      <div className="bg-indigo-600 h-2 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderProfile = () => (
-    <div className="max-w-[800px] mx-auto space-y-stack_lg">
+    <div className="max-w-[800px] mx-auto space-y-stack_lg animate-[fadeIn_0.3s_ease-out]">
       <div className="border-b border-outline-variant/20 pb-4">
         <h2 className="font-headline-lg text-headline-lg font-bold text-on-background">Edit Professional Profile</h2>
         <p className="text-sm text-on-surface-variant mt-1">Manage details presented to potential clients on the marketplace.</p>
       </div>
 
-      <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-xl p-6 shadow-sm">
+      <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-8 shadow-md space-y-6">
         <form onSubmit={handleProfileUpdate} className="space-y-6">
           
           {/* Profile Picture Section */}
-          <div className="flex flex-col sm:flex-row gap-5 items-center pb-4 border-b border-outline-variant/10">
+          <div className="flex flex-col sm:flex-row gap-5 items-center pb-5 border-b border-slate-100">
             {profilePictureFile ? (
-              <img src={URL.createObjectURL(profilePictureFile)} alt="Preview" className="w-20 h-20 rounded-xl object-cover" />
+              <img src={URL.createObjectURL(profilePictureFile)} alt="Preview" className="w-20 h-20 rounded-2xl object-cover border-2 border-indigo-500 shadow-md" />
             ) : profile.profile_picture ? (
-              <img src={profile.profile_picture} alt="Profile" className="w-20 h-20 rounded-xl object-cover" />
+              <img src={profile.profile_picture} alt="Profile" className="w-20 h-20 rounded-2xl object-cover border-2 border-slate-200 shadow-md" />
             ) : (
-              <div className="w-20 h-20 rounded-xl bg-primary/10 text-primary flex items-center justify-center font-bold text-2xl">
+              <div className="w-20 h-20 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-2xl shadow-md">
                 {profile.first_name ? profile.first_name[0].toUpperCase() : 'P'}
               </div>
             )}
-            <div className="flex-1 flex flex-col gap-1 w-full sm:w-auto">
-              <label className="text-xs font-bold text-on-surface-variant uppercase">Update profile photo</label>
+            <div className="flex-1 flex flex-col gap-1.5 w-full sm:w-auto">
+              <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Update profile photo</label>
               <input 
                 type="file" 
                 accept="image/*"
                 onChange={(e) => setProfilePictureFile(e.target.files[0])}
-                className="text-xs border border-outline-variant/60 rounded-lg p-2 bg-transparent cursor-pointer w-full"
+                className="text-xs border border-slate-300 rounded-2xl p-2.5 bg-white text-slate-900 cursor-pointer w-full shadow-2xs"
               />
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-bold text-on-surface-variant">Years of Experience</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Years of Experience</label>
               <input
                 type="number"
                 min="0"
                 value={profile.experience_years || 0}
                 onChange={(e) => setProfile({...profile, experience_years: e.target.value})}
-                className="rounded-lg border border-outline-variant/60 p-2.5 text-sm bg-transparent"
+                className="rounded-2xl border border-slate-300 p-3 text-xs bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all shadow-2xs font-bold"
               />
             </div>
 
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-bold text-on-surface-variant">Skills (Comma Separated)</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Skills (Comma Separated)</label>
               <input
                 type="text"
                 placeholder="e.g. Plumbing, Pipe Fitting, Repair"
                 value={profile.skills || ''}
                 onChange={(e) => setProfile({...profile, skills: e.target.value})}
-                className="rounded-lg border border-outline-variant/60 p-2.5 text-sm bg-transparent"
+                className="rounded-2xl border border-slate-300 p-3 text-xs bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all shadow-2xs font-bold"
               />
             </div>
 
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-bold text-on-surface-variant">Phone Number</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Phone Number</label>
               <input
                 type="tel"
                 value={profile.phone_number || ''}
                 onChange={(e) => setProfile({...profile, phone_number: e.target.value})}
-                className="rounded-lg border border-outline-variant/60 p-2.5 text-sm bg-transparent"
+                className="rounded-2xl border border-slate-300 p-3 text-xs bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all shadow-2xs font-bold"
               />
             </div>
 
-            <div className="flex flex-col gap-1">
-              <label className="text-xs font-bold text-on-surface-variant">City</label>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">City</label>
               <select
                 value={profile.city || ''}
                 onChange={(e) => setProfile({...profile, city: e.target.value})}
-                className="rounded-lg border border-outline-variant/60 p-2.5 text-sm bg-transparent"
+                className="rounded-2xl border border-slate-300 p-3 text-xs bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all shadow-2xs font-bold"
               >
                 <option value="">-- Select City --</option>
                 {INDIAN_CITIES.map(city => (
@@ -1540,19 +1768,29 @@ const ProviderDashboard = () => {
                 ))}
               </select>
             </div>
+          </div>
 
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Professional Bio</label>
+            <textarea
+              rows="3"
+              placeholder="Tell customers about your expertise and quality of work..."
+              value={profile.bio || ''}
+              onChange={(e) => setProfile({...profile, bio: e.target.value})}
+              className="rounded-2xl border border-slate-300 p-3 text-xs bg-white text-slate-900 focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 outline-none transition-all shadow-2xs font-medium"
+            />
           </div>
 
           {/* User-Friendly Service Location Trigger Card */}
-          <div className="flex flex-col gap-3 pt-3 border-t border-slate-200">
-            <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
+          <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
+            <div className="bg-indigo-50/60 border border-indigo-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold shrink-0 border border-indigo-200">
-                  📍
+                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shrink-0 shadow-xs">
+                  <span className="material-symbols-outlined text-xl">location_on</span>
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-slate-900">Service Base Location</h4>
-                  <p className="text-[11px] text-slate-500 font-medium mt-0.5">
+                  <h4 className="text-xs font-extrabold text-slate-900">Service Base Location</h4>
+                  <p className="text-[11px] text-slate-600 font-semibold mt-0.5">
                     {profile.latitude && profile.longitude
                       ? '✓ Custom location pinned on map'
                       : 'Default city location active (Click button to pick exact shop/base on map)'}
@@ -1563,26 +1801,20 @@ const ProviderDashboard = () => {
               <button
                 type="button"
                 onClick={() => setShowLocationMapModal(true)}
-                className="w-full sm:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
+                className="w-full sm:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
               >
-                <span>📍 Select Location on Map</span>
+                <span className="material-symbols-outlined text-base">map</span>
+                <span>Select Location on Map</span>
               </button>
             </div>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs font-bold text-on-surface-variant">Bio / About Me</label>
-            <textarea
-              rows="4"
-              value={profile.bio || ''}
-              onChange={(e) => setProfile({...profile, bio: e.target.value})}
-              placeholder="Tell potential clients about your experience, training, and customer approach..."
-              className="rounded-lg border border-outline-variant/60 p-3 text-sm bg-transparent w-full"
-            ></textarea>
-          </div>
-
-          <button type="submit" className="w-full bg-primary text-on-primary py-3 rounded-lg font-bold text-sm hover:bg-surface-tint transition-colors cursor-pointer shadow-md">
-            Save Profile Details
+          <button 
+            type="submit" 
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-2xl text-xs font-extrabold shadow-md hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2"
+          >
+            <span className="material-symbols-outlined text-lg">save</span>
+            Save Profile Changes
           </button>
         </form>
       </div>
@@ -1621,6 +1853,7 @@ const ProviderDashboard = () => {
         <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
           {[
             { tab: 'Dashboard', icon: 'dashboard', label: 'Dashboard', onClick: () => setActiveTab('Dashboard') },
+            { tab: 'Analytics', icon: 'analytics', label: 'Analytics', onClick: () => setActiveTab('Analytics') },
             { tab: 'Services', icon: 'handyman', label: 'My Services', onClick: () => setActiveTab('Services') },
             { tab: 'Portfolio', icon: 'collections', label: 'Portfolio', onClick: () => setActiveTab('Portfolio') },
             { tab: 'History', icon: 'history', label: 'Job History', onClick: () => setActiveTab('History') },
@@ -1715,6 +1948,7 @@ const ProviderDashboard = () => {
         {/* Content Container */}
         <div className="p-gutter max-w-container_max w-full mx-auto flex-1 pb-16">
           {activeTab === 'Dashboard' && renderDashboard()}
+          {activeTab === 'Analytics' && renderAnalytics()}
           {activeTab === 'Services' && renderServices()}
           {activeTab === 'Portfolio' && renderPortfolio()}
           {activeTab === 'History' && renderHistory()}

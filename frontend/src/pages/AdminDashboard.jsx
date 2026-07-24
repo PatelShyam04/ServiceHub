@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, AreaChart, Area, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../api/axios';
 import ConfirmModal from '../components/ConfirmModal';
 
@@ -391,27 +391,44 @@ const AdminDashboard = () => {
 
       {/* Main Charts & Verifications Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Revenue Performance Chart */}
+        {/* Revenue Performance Area Chart */}
         <div className="lg:col-span-2 bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-md flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-title-md text-title-md font-extrabold text-on-background flex items-center gap-2">
                 <span className="material-symbols-outlined text-indigo-600 text-xl">trending_up</span>
-                Monthly Revenue & Booking Trends
+                Platform Revenue & Commission Growth
               </h3>
-              <p className="text-xs text-on-surface-variant font-medium mt-0.5">Platform volume and growth metrics</p>
+              <p className="text-xs text-on-surface-variant font-medium mt-0.5">Gross revenue and 10% platform share over time</p>
             </div>
+            <span className="text-xs font-bold px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full border border-indigo-200">
+              ₹ Financial Growth
+            </span>
           </div>
           <div className="h-64 w-full">
             {stats.monthly_data && stats.monthly_data.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.monthly_data}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-                  <XAxis dataKey="month" stroke="#64748b" fontSize={12} />
-                  <YAxis stroke="#64748b" fontSize={12} />
-                  <Tooltip cursor={{ fill: 'rgba(70, 72, 212, 0.04)' }} formatter={(val, name) => [name === 'revenue' ? `₹${val}` : val, name === 'revenue' ? 'Revenue' : 'Bookings']} />
-                  <Bar dataKey="revenue" fill="#4f46e5" radius={[8, 8, 0, 0]} />
-                </BarChart>
+                <AreaChart data={stats.monthly_data} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="adminColorRev" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#4f46e5" stopOpacity={0.0}/>
+                    </linearGradient>
+                    <linearGradient id="adminColorComm" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0.0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(v) => `₹${v}`} />
+                  <Tooltip
+                    formatter={(val, name) => [ `₹${val}`, name === 'revenue' ? 'Gross Revenue' : '10% Commission' ]}
+                    contentStyle={{ borderRadius: '16px', background: '#0f172a', color: '#fff', border: 'none', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}
+                  />
+                  <Area type="monotone" dataKey="revenue" stroke="#4f46e5" strokeWidth={3} fillOpacity={1} fill="url(#adminColorRev)" />
+                  <Area type="monotone" dataKey="commission" stroke="#10b981" strokeWidth={2} fillOpacity={1} fill="url(#adminColorComm)" />
+                </AreaChart>
               </ResponsiveContainer>
             ) : (
               <div className="h-full flex items-center justify-center text-xs text-on-surface-variant font-medium">
@@ -421,53 +438,114 @@ const AdminDashboard = () => {
           </div>
         </div>
 
-        {/* Quick Diagnostics */}
-        <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-md flex flex-col gap-6">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-indigo-600 text-xl">dvr</span>
-            <h3 className="font-title-md text-title-md font-extrabold text-on-background">System Diagnostics</h3>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-on-surface-variant">Server Resource Load</span>
-                <span className="font-extrabold text-indigo-600">34%</span>
-              </div>
-              <div className="w-full bg-surface-container-low h-2.5 rounded-full overflow-hidden">
-                <div className="bg-indigo-600 h-full rounded-full transition-all duration-500" style={{ width: '34%' }} />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex justify-between items-center text-xs">
-                <span className="font-bold text-on-surface-variant">Database Cache Pool</span>
-                <span className="font-extrabold text-emerald-600">82%</span>
-              </div>
-              <div className="w-full bg-surface-container-low h-2.5 rounded-full overflow-hidden">
-                <div className="bg-emerald-600 h-full rounded-full transition-all duration-500" style={{ width: '82%' }} />
-              </div>
+        {/* Booking Status Distribution Donut */}
+        <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-md flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <div>
+              <h3 className="font-title-md text-title-md font-extrabold text-on-background flex items-center gap-2">
+                <span className="material-symbols-outlined text-indigo-600 text-xl">pie_chart</span>
+                Booking Status
+              </h3>
+              <p className="text-xs text-on-surface-variant font-medium">Platform completion rates</p>
             </div>
           </div>
 
-          <div className="space-y-3 pt-4 border-t border-outline-variant/20">
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-surface-container-low/50 border border-outline-variant/20">
-              <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-                <span className="text-xs text-on-surface font-extrabold">API Gateway</span>
-              </div>
-              <span className="text-xs text-emerald-700 font-mono font-extrabold">99.9% Uptime</span>
+          <div className="h-[180px] w-full relative flex items-center justify-center">
+            {stats.status_counts ? (() => {
+              const pieData = [
+                { name: 'Completed', value: stats.status_counts.completed, color: '#10b981' },
+                { name: 'Pending', value: stats.status_counts.pending, color: '#f59e0b' },
+                { name: 'Accepted', value: stats.status_counts.accepted, color: '#6366f1' },
+                { name: 'Cancelled', value: stats.status_counts.cancelled, color: '#ef4444' },
+              ].filter(item => item.value > 0);
+
+              if (pieData.length === 0) {
+                return (
+                  <div className="text-center text-slate-400">
+                    <span className="material-symbols-outlined text-3xl mb-1 text-slate-300">pie_chart</span>
+                    <p className="text-xs font-semibold">No booking status metrics.</p>
+                  </div>
+                );
+              }
+
+              return (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={45}
+                      outerRadius={70}
+                      paddingAngle={4}
+                      dataKey="value"
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(val, name) => [`${val} bookings`, name]}
+                      contentStyle={{ borderRadius: '12px', background: '#0f172a', color: '#fff', border: 'none' }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              );
+            })() : null}
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-xs">
+            <div className="flex justify-between p-1.5 rounded-lg bg-slate-50 font-medium text-slate-700">
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"/>Completed</span>
+              <span className="font-extrabold">{stats.status_counts?.completed || 0}</span>
             </div>
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-surface-container-low/50 border border-outline-variant/20">
-              <div className="flex items-center gap-2">
-                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-                <span className="text-xs text-on-surface font-extrabold">Database Sync</span>
-              </div>
-              <span className="text-xs text-emerald-700 font-mono font-extrabold">Optimal</span>
+            <div className="flex justify-between p-1.5 rounded-lg bg-slate-50 font-medium text-slate-700">
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500"/>Pending</span>
+              <span className="font-extrabold">{stats.status_counts?.pending || 0}</span>
+            </div>
+            <div className="flex justify-between p-1.5 rounded-lg bg-slate-50 font-medium text-slate-700">
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-indigo-500"/>Accepted</span>
+              <span className="font-extrabold">{stats.status_counts?.accepted || 0}</span>
+            </div>
+            <div className="flex justify-between p-1.5 rounded-lg bg-slate-50 font-medium text-slate-700">
+              <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500"/>Cancelled</span>
+              <span className="font-extrabold">{stats.status_counts?.cancelled || 0}</span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Top Categories Leaderboard */}
+      {stats.top_categories && stats.top_categories.length > 0 && (
+        <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-md space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="font-title-md text-title-md font-extrabold text-on-background flex items-center gap-2">
+              <span className="material-symbols-outlined text-indigo-600 text-xl">leaderboard</span>
+              Top Performing Categories
+            </h3>
+            <span className="text-xs font-semibold text-slate-500">By gross revenue</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {stats.top_categories.map((cat, idx) => (
+              <div key={cat.name} className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-200/60 flex items-center justify-between shadow-2xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-600 text-white font-extrabold text-xs flex items-center justify-center shadow-xs">
+                    #{idx + 1}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm text-slate-900">{cat.name}</h4>
+                    <p className="text-xs text-slate-500">{cat.count} completed bookings</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="font-extrabold text-indigo-700 text-base">₹{cat.revenue.toFixed(0)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 

@@ -181,3 +181,61 @@ class ServicesTests(APITestCase):
         response = self.client.delete(clear_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(Notification.objects.filter(user=self.customer_user).count(), 0)
+
+    def test_available_time_slots_and_double_booking_prevention(self):
+        from .models import ProviderAvailability
+        # Create availability slot for provider on Monday (0)
+        ProviderAvailability.objects.create(
+            provider=self.provider_profile,
+            day_of_week=0,
+            start_time="09:00:00",
+            end_time="17:00:00",
+            is_available=True
+        )
+
+        # Test GET available slots on a Monday date e.g. 2026-07-27
+        url = reverse('available-slots')
+        response = self.client.get(url, {'provider_id': self.provider_profile.id, 'date': '2026-07-27'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('slots', response.data)
+        self.assertEqual(len(response.data['slots']), 8) # 9 AM to 5 PM = 8 slots of 1 hr
+        self.assertEqual(response.data['slots'][0]['label'], '09:00 AM - 10:00 AM')
+
+        # Create a customer 2
+        cust2 = CustomUser.objects.create_user(username="customer2", email="cust2@test.com", password="password123", is_customer=True)
+        cust2_profile = CustomerProfile.objects.create(user=cust2, phone_number="9999")
+
+        from datetime import datetime
+        local_bdt = timezone.make_aware(datetime(2026, 7, 27, 9, 0, 0))
+
+        # Book 09:00 AM slot for provider on 2026-07-27
+        self.client.force_authenticate(user=self.customer_user)
+        booking_url = reverse('booking_list_create')
+        data = {
+            "provider_service_id": self.provider_service.id,
+            "booking_date": local_bdt.isoformat(),
+            "address": "789 Park Rd, Mumbai"
+        }
+        res1 = self.client.post(booking_url, data, format='json')
+        self.assertEqual(res1.status_code, status.HTTP_201_CREATED)
+
+        # Re-fetch available slots and check 09:00 AM is now marked as booked
+        response_after = self.client.get(url, {'provider_id': self.provider_profile.id, 'date': '2026-07-27'})
+        self.assertTrue(response_after.data['slots'][0]['is_booked'])
+
+        # Attempt double-booking by customer 2 for the exact same slot
+        self.client.force_authenticate(user=cust2)
+        res2 = self.client.post(booking_url, data, format='json')
+        self.assertEqual(res2.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("This time slot has already been booked", str(res2.data))
+
+        # Test past time slot booking rejection
+        past_bdt = timezone.now() - timezone.timedelta(hours=3)
+        past_data = {
+            "provider_service_id": self.provider_service.id,
+            "booking_date": past_bdt.isoformat(),
+            "address": "Past St, Mumbai"
+        }
+        res_past = self.client.post(booking_url, past_data, format='json')
+        self.assertEqual(res_past.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("Booking date and time cannot be in the past", str(res_past.data))

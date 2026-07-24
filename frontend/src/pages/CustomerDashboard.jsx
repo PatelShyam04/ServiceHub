@@ -1728,49 +1728,99 @@ const CustomerDashboard = () => {
                 {/* ── Time Slot Picker ── */}
                 {bookingDate && (
                   <div className="space-y-2 animate-[fadeIn_0.2s_ease-out]">
-                    <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
-                      <span className="material-symbols-outlined text-primary text-base">schedule</span>
-                      Available Time Slots — {new Date(bookingDate + 'T12:00:00').toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' })}
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
+                        <span className="material-symbols-outlined text-primary text-base">schedule</span>
+                        Available 1-Hour Time Slots — {new Date(bookingDate + 'T12:00:00').toLocaleDateString('en-IN', { weekday:'short', day:'numeric', month:'short' })}
+                      </label>
+                      <span className="text-[11px] font-semibold text-slate-500">1-hour slots</span>
+                    </div>
                     {slotsLoading ? (
                       <div className="flex justify-center py-6">
                         <div className="animate-spin rounded-full h-7 w-7 border-b-2 border-primary" />
                       </div>
-                    ) : availableSlots === null ? null : availableSlots.available_slots.length === 0 ? (
+                    ) : availableSlots === null ? null : (availableSlots.slots ? availableSlots.slots.length === 0 : availableSlots.available_slots.length === 0) ? (
                       <div className="text-center py-5 text-xs font-medium text-on-surface-variant bg-amber-50/60 border border-amber-200/60 rounded-2xl">
                         <span className="material-symbols-outlined text-2xl text-amber-600 block mb-1">event_busy</span>
                         {availableSlots.reason || 'No available slots on this day. Please choose another date.'}
                       </div>
                     ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {availableSlots.available_slots.map(slot => (
-                          <button
-                            key={slot}
-                            type="button"
-                            onClick={() => setBookingTime(slot)}
-                            className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer shadow-2xs flex items-center gap-1.5 ${
-                              bookingTime === slot
-                                ? 'bg-indigo-600 text-white border-indigo-600 shadow-md ring-2 ring-indigo-300 scale-105'
-                                : 'border-outline-variant/40 bg-surface-container-lowest text-on-surface hover:border-indigo-400 hover:bg-indigo-50/50'
-                            }`}
-                          >
-                            <span className="material-symbols-outlined text-[15px]">schedule</span>
-                            {slot}
-                          </button>
-                        ))}
-                        {/* Show booked slots as disabled */}
-                        {(availableSlots.booked_slots || []).map(slot => (
-                          <button
-                            key={`booked-${slot}`}
-                            type="button"
-                            disabled
-                            title="Already booked"
-                            className="px-4 py-2.5 rounded-xl text-xs font-bold border border-outline-variant/20 text-outline-variant/40 line-through cursor-not-allowed bg-surface-container-low/50 flex items-center gap-1.5"
-                          >
-                            <span className="material-symbols-outlined text-[15px]">block</span>
-                            {slot}
-                          </button>
-                        ))}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {availableSlots.slots ? (
+                          availableSlots.slots.map(slotItem => {
+                            const isSelected = bookingTime === slotItem.start_time;
+                            if (slotItem.is_past) {
+                              return (
+                                <button
+                                  key={`past-${slotItem.start_time}`}
+                                  type="button"
+                                  disabled
+                                  title="This time slot has already passed"
+                                  className="px-3.5 py-2.5 rounded-xl text-xs font-semibold border border-slate-200 text-slate-400 bg-slate-100/60 cursor-not-allowed flex items-center justify-between"
+                                >
+                                  <span className="flex items-center gap-1.5 line-through">
+                                    <span className="material-symbols-outlined text-[15px] text-slate-400">history</span>
+                                    {slotItem.label}
+                                  </span>
+                                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-slate-200 text-slate-500 uppercase tracking-wider">Passed</span>
+                                </button>
+                              );
+                            }
+                            if (slotItem.is_booked) {
+                              return (
+                                <button
+                                  key={`booked-${slotItem.start_time}`}
+                                  type="button"
+                                  disabled
+                                  title="Slot already booked by another customer"
+                                  className="px-3.5 py-2.5 rounded-xl text-xs font-semibold border border-amber-200/80 text-amber-800/60 bg-amber-50/50 cursor-not-allowed flex items-center justify-between"
+                                >
+                                  <span className="flex items-center gap-1.5 line-through">
+                                    <span className="material-symbols-outlined text-[15px] text-amber-600/70">block</span>
+                                    {slotItem.label}
+                                  </span>
+                                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-100 text-amber-800 uppercase tracking-wider">Booked</span>
+                                </button>
+                              );
+                            }
+                            return (
+                              <button
+                                key={slotItem.start_time}
+                                type="button"
+                                onClick={() => setBookingTime(slotItem.start_time)}
+                                className={`px-3.5 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer shadow-2xs flex items-center justify-between ${
+                                  isSelected
+                                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-md ring-2 ring-indigo-300 scale-[1.02]'
+                                    : 'border-slate-200 bg-white text-slate-800 hover:border-indigo-400 hover:bg-indigo-50/50'
+                                }`}
+                              >
+                                <span className="flex items-center gap-1.5">
+                                  <span className={`material-symbols-outlined text-[15px] ${isSelected ? 'text-white' : 'text-indigo-600'}`}>schedule</span>
+                                  {slotItem.label}
+                                </span>
+                                {isSelected && (
+                                  <span className="material-symbols-outlined text-[16px] text-white">check_circle</span>
+                                )}
+                              </button>
+                            );
+                          })
+                        ) : (
+                          availableSlots.available_slots.map(slot => (
+                            <button
+                              key={slot}
+                              type="button"
+                              onClick={() => setBookingTime(slot)}
+                              className={`px-4 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer shadow-2xs flex items-center gap-1.5 ${
+                                bookingTime === slot
+                                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-md ring-2 ring-indigo-300 scale-105'
+                                  : 'border-outline-variant/40 bg-surface-container-lowest text-on-surface hover:border-indigo-400 hover:bg-indigo-50/50'
+                              }`}
+                            >
+                              <span className="material-symbols-outlined text-[15px]">schedule</span>
+                              {slot}
+                            </button>
+                          ))
+                        )}
                       </div>
                     )}
                   </div>
@@ -1869,7 +1919,7 @@ const CustomerDashboard = () => {
                     <div className="flex items-center gap-3 p-3.5 bg-emerald-50 border border-emerald-200/80 rounded-2xl text-xs font-bold text-emerald-900 shadow-2xs animate-[fadeIn_0.2s_ease-out]">
                       <span className="material-symbols-outlined text-emerald-600 text-xl">event_available</span>
                       <span>
-                        Appointment set for <span className="underline">{new Date(bookingDate + 'T12:00:00').toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long' })}</span> at <span className="underline">{bookingTime}</span>
+                        Appointment set for <span className="underline">{new Date(bookingDate + 'T12:00:00').toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long' })}</span> ({availableSlots?.slots?.find(s => s.start_time === bookingTime)?.label || bookingTime})
                       </span>
                     </div>
                   )}

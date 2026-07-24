@@ -139,18 +139,28 @@ class BookingListCreateView(generics.ListCreateAPIView):
         provider_service = serializer.validated_data.get('provider_service')
         booking_date = serializer.validated_data.get('booking_date')
 
-        # Duplicate Booking Protection
+        # Double-Booking & Past Time Protection for Provider & Customer
         if provider_service and booking_date:
-            existing_duplicate = Booking.objects.filter(
-                customer=customer_profile,
-                provider_service=provider_service,
-                booking_date=booking_date,
+            from datetime import timedelta
+            from rest_framework.exceptions import ValidationError
+            from django.utils import timezone
+
+            if booking_date < timezone.now() - timedelta(minutes=5):
+                raise ValidationError({"non_field_errors": ["Cannot book a time slot in the past. Please select an upcoming time slot."]})
+
+            provider = provider_service.provider
+            slot_start = booking_date
+            slot_end = booking_date + timedelta(hours=1)
+
+            existing_conflict = Booking.objects.filter(
+                provider_service__provider=provider,
+                booking_date__gte=slot_start - timedelta(minutes=59),
+                booking_date__lt=slot_end,
                 status__in=['pending', 'accepted']
             ).first()
 
-            if existing_duplicate:
-                from rest_framework.exceptions import ValidationError
-                raise ValidationError({"non_field_errors": ["A booking request for this slot has already been submitted."]})
+            if existing_conflict:
+                raise ValidationError({"non_field_errors": ["This time slot has already been booked by another customer. Please select a different time slot."]})
 
         booking = serializer.save(customer=customer_profile)
         
@@ -578,14 +588,15 @@ class ProviderAvailabilityView(generics.GenericAPIView):
 
 class AvailableTimeSlotsView(APIView):
     """GET /services/available-slots/?provider_id=X&date=YYYY-MM-DD
-    Returns a list of available 30-min start times for the given provider on that date.
-    Already-accepted/pending bookings are excluded."""
+    Returns a list of intelligent 1-hour time slots for the given provider on that date.
+    Already-accepted/pending bookings are locked and marked as booked."""
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, *args, **kwargs):
         from datetime import datetime, timedelta, date as date_type
         from rest_framework.exceptions import ValidationError
         from accounts.models import ProviderProfile
+        from django.utils import timezone
 
         provider_id = request.query_params.get('provider_id')
         date_str = request.query_params.get('date')
@@ -603,7 +614,7 @@ class AvailableTimeSlotsView(APIView):
         except ValueError:
             raise ValidationError("Invalid date format. Use YYYY-MM-DD.")
 
-        # 0=Mon, 6=Sun  (Python weekday() convention matches our model)
+        # 0=Mon, 6=Sun (Python weekday() convention matches our model)
         day_of_week = query_date.weekday()
 
         # Find the provider's availability slot for this day
@@ -615,33 +626,59 @@ class AvailableTimeSlotsView(APIView):
             )
         except ProviderAvailability.DoesNotExist:
             # Provider is not available on this day
-            return Response({'available_slots': [], 'reason': 'Provider not available on this day.'})
+            return Response({'slots': [], 'available_slots': [], 'booked_slots': [], 'reason': 'Provider not available on this day.'})
 
-        # Build all 30-min slots between start and end time
-        all_slots = []
-        current = datetime.combine(query_date, slot.start_time)
-        end_dt = datetime.combine(query_date, slot.end_time)
-        while current < end_dt:
-            all_slots.append(current.strftime('%H:%M'))
-            current += timedelta(minutes=30)
-
-        # Find already-booked times on this date for this provider
-        from django.utils import timezone
-        booked_datetimes = Booking.objects.filter(
+        # Fetch active bookings for this provider on the given date (evaluating local date)
+        active_bookings = Booking.objects.filter(
             provider_service__provider=provider,
-            booking_date__date=query_date,
             status__in=['pending', 'accepted']
-        ).values_list('booking_date', flat=True)
+        )
 
         booked_times = set()
-        for bdt in booked_datetimes:
-            # Convert to local time
-            local_dt = timezone.localtime(bdt)
-            booked_times.add(local_dt.strftime('%H:%M'))
+        for b in active_bookings:
+            local_dt = timezone.localtime(b.booking_date)
+            if local_dt.date() == query_date:
+                booked_times.add(local_dt.strftime('%H:%M'))
 
-        available_slots = [s for s in all_slots if s not in booked_times]
+        # Build 1-hour slots between start and end time
+        slots_list = []
+        available_slots = []
+
+        now_local = timezone.localtime()
+
+        current = datetime.combine(query_date, slot.start_time)
+        end_dt = datetime.combine(query_date, slot.end_time)
+
+        while current + timedelta(hours=1) <= end_dt:
+            next_hour = current + timedelta(hours=1)
+            time_key = current.strftime('%H:%M')
+
+            label = f"{current.strftime('%I:%M %p')} - {next_hour.strftime('%I:%M %p')}"
+            is_booked = time_key in booked_times
+
+            # Check if this 1-hour slot has already passed
+            current_aware = timezone.make_aware(next_hour) if timezone.is_naive(next_hour) else next_hour
+            is_past = current_aware <= now_local
+
+            is_available = (not is_booked) and (not is_past)
+
+            slot_item = {
+                'start_time': time_key,
+                'end_time': next_hour.strftime('%H:%M'),
+                'label': label,
+                'is_booked': is_booked,
+                'is_past': is_past,
+                'is_available': is_available
+            }
+            slots_list.append(slot_item)
+
+            if is_available:
+                available_slots.append(time_key)
+
+            current += timedelta(hours=1)
 
         return Response({
+            'slots': slots_list,
             'available_slots': available_slots,
             'booked_slots': list(booked_times),
             'day': query_date.strftime('%A'),
@@ -659,11 +696,22 @@ class ProviderAnalyticsAPIView(APIView):
         provider = request.user.provider_profile
         bookings = Booking.objects.filter(provider_service__provider=provider)
 
-        total_earnings = sum(b.provider_service.price for b in bookings.filter(status='completed'))
+        total_bookings_count = bookings.count()
         total_completed = bookings.filter(status='completed').count()
         total_pending = bookings.filter(status='pending').count()
         total_accepted = bookings.filter(status='accepted').count()
         total_cancelled = bookings.filter(status='cancelled').count()
+
+        total_earnings = sum(b.provider_service.price for b in bookings.filter(status='completed'))
+        avg_booking_value = round(float(total_earnings / total_completed), 2) if total_completed > 0 else 0.0
+        completion_rate = round((total_completed / total_bookings_count * 100), 1) if total_bookings_count > 0 else 0.0
+        cancellation_rate = round((total_cancelled / total_bookings_count * 100), 1) if total_bookings_count > 0 else 0.0
+
+        # Review stats
+        from services.models import Review
+        avg_rating_val = Review.objects.filter(booking__provider_service__provider=provider).aggregate(Avg('rating'))['rating__avg'] or 0.0
+        avg_rating = round(float(avg_rating_val), 1)
+        total_reviews = Review.objects.filter(booking__provider_service__provider=provider).count()
 
         # Monthly breakdown
         from django.db.models.functions import TruncMonth
@@ -705,6 +753,12 @@ class ProviderAnalyticsAPIView(APIView):
 
         return Response({
             "total_earnings": float(total_earnings),
+            "total_bookings_count": total_bookings_count,
+            "avg_booking_value": avg_booking_value,
+            "completion_rate": completion_rate,
+            "cancellation_rate": cancellation_rate,
+            "avg_rating": avg_rating,
+            "total_reviews": total_reviews,
             "status_counts": {
                 "completed": total_completed,
                 "pending": total_pending,

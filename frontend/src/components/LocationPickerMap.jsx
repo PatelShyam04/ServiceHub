@@ -174,9 +174,10 @@ export const LocationPickerMap = ({ latitude, longitude, onLocationChange, onCon
     );
   };
 
-// Famous Indian Landmarks & Educational Institutions Quick-Lookup Dictionary (Pan-India)
+// Famous Indian Landmarks, Hostels & Educational Institutions Quick-Lookup Dictionary (Pan-India)
 const FAMOUS_INDIAN_LANDMARKS = [
-  // 🎓 Gujarat Universities & Colleges
+  // 🎓 Hostels & Educational Institutions (Gujarat & Pan-India)
+  { keywords: ['kp vidyarthi bhavan', 'k p vidhyarthi bhavan', 'kp hostel', 'vidhyarthi bhavan ahmedabad', 'vidyarthi bhavan paldi', 'kp vidhyarthi'], lat: 23.0225, lon: 72.5714, name: 'Shree K.P. Vidyarthi Bhavan Hostel, Paldi / Ellisbridge, Ahmedabad, Gujarat' },
   { keywords: ['lj university', 'lj college', 'lj institute', 'lj campus', 'lok jagruti', 'lj engineering'], lat: 22.9878, lon: 72.5020, name: 'L.J. University Campus, S.G. Highway, Ahmedabad, Gujarat' },
   { keywords: ['iim ahmedabad', 'iim-a', 'iim campus', 'iim vastrapur'], lat: 23.0315, lon: 72.5312, name: 'Indian Institute of Management (IIM), Vastrapur, Ahmedabad, Gujarat' },
   { keywords: ['nirma university', 'nirma college', 'nirma campus'], lat: 23.1287, lon: 72.5445, name: 'Nirma University, S.G. Highway, Ahmedabad, Gujarat' },
@@ -237,9 +238,35 @@ const FAMOUS_INDIAN_LANDMARKS = [
   { keywords: ['viman nagar pune'], lat: 18.5679, lon: 73.9143, name: 'Viman Nagar, Pune, Maharashtra' },
 ];
 
+  // Helper function to sanitize user search query & correct common Indian city/area typos
+  const sanitizeIndianQuery = (queryStr) => {
+    if (!queryStr) return '';
+    return queryStr
+      .trim()
+      .toLowerCase()
+      // Fix common city spelling typos
+      .replace(/\bahemadabad\b/g, 'ahmedabad')
+      .replace(/\bahemdabad\b/g, 'ahmedabad')
+      .replace(/\bahmadabad\b/g, 'ahmedabad')
+      .replace(/\bamdavad\b/g, 'ahmedabad')
+      .replace(/\bbaroda\b/g, 'vadodara')
+      .replace(/\bbengaluru\b/g, 'bangalore')
+      .replace(/\bgurugram\b/g, 'gurgaon')
+      // Fix common word variations
+      .replace(/\bvidhyarthi\b/g, 'vidyarthi')
+      .replace(/\bvidhyarthi bhavan\b/g, 'vidyarthi bhavan')
+      .replace(/\bk p\b/g, 'kp')
+      .replace(/\bk\.p\.\b/g, 'kp')
+      // Standardize acronyms
+      .replace(/\blj\b/g, 'L.J.')
+      .replace(/\biim\b/g, 'I.I.M.')
+      .replace(/\biit\b/g, 'I.I.T.')
+      .replace(/\baiims\b/g, 'A.I.I.M.S.');
+  };
+
   const [searchError, setSearchError] = useState('');
 
-  // Debounced live suggestion fetch on typing
+  // Debounced live suggestion fetch on typing (Photon Fuzzy + Nominatim + Local Dictionary)
   useEffect(() => {
     if (!searchQuery || searchQuery.trim().length < 2) {
       setSearchResults([]);
@@ -247,11 +274,11 @@ const FAMOUS_INDIAN_LANDMARKS = [
     }
 
     const timer = setTimeout(async () => {
-      const cleanQuery = searchQuery.trim().toLowerCase();
+      const sanitized = sanitizeIndianQuery(searchQuery);
 
-      // Check instant landmark dictionary
+      // 1. Check instant landmark dictionary
       const localMatches = FAMOUS_INDIAN_LANDMARKS.filter((lm) =>
-        lm.keywords.some((kw) => cleanQuery.includes(kw) || kw.includes(cleanQuery))
+        lm.keywords.some((kw) => sanitized.includes(kw) || kw.includes(sanitized) || searchQuery.toLowerCase().includes(kw))
       ).map(lm => ({
         lat: lm.lat,
         lon: lm.lon,
@@ -259,51 +286,81 @@ const FAMOUS_INDIAN_LANDMARKS = [
         isLocal: true,
       }));
 
+      const apiResults = [];
+
+      // 2. Query Photon Fuzzy Search API (Handles typos, hostels, local places across India)
       try {
-        const dottedQuery = cleanQuery
-          .replace(/\blj\b/gi, 'L.J.')
-          .replace(/\biim\b/gi, 'I.I.M.')
-          .replace(/\biit\b/gi, 'I.I.T.')
-          .replace(/\baiims\b/gi, 'A.I.I.M.S.');
-
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(dottedQuery)}&countrycodes=in&addressdetails=1&limit=6`;
-        const res = await fetch(url, {
-          headers: { 'Accept-Language': 'en-US,en;q=0.9' },
-        });
-
-        if (res.ok) {
-          const apiData = await res.json();
-          // Merge local dictionary matches + API results without duplicates
-          const combined = [...localMatches];
-          (apiData || []).forEach(item => {
-            if (!combined.some(c => Math.abs(parseFloat(c.lat) - parseFloat(item.lat)) < 0.005 && Math.abs(parseFloat(c.lon) - parseFloat(item.lon)) < 0.005)) {
-              combined.push(item);
-            }
-          });
-          setSearchResults(combined);
-        } else {
-          setSearchResults(localMatches);
+        const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(sanitized)}&limit=6&bbox=68.0,8.0,97.0,37.0`;
+        const photonRes = await fetch(photonUrl);
+        if (photonRes.ok) {
+          const photonData = await photonRes.json();
+          if (photonData && photonData.features) {
+            photonData.features.forEach(f => {
+              const props = f.properties || {};
+              const coords = f.geometry?.coordinates || [];
+              if (coords.length === 2) {
+                const nameStr = [props.name, props.street, props.district, props.city || props.county, props.state, 'India']
+                  .filter(Boolean)
+                  .join(', ');
+                apiResults.push({
+                  lat: coords[1],
+                  lon: coords[0],
+                  display_name: nameStr,
+                });
+              }
+            });
+          }
         }
-      } catch (e) {
-        setSearchResults(localMatches);
+      } catch (err) {
+        // Fallback silently to Nominatim if Photon is unreachable
       }
-    }, 280);
+
+      // 3. Query Nominatim API with India restriction
+      if (apiResults.length < 3) {
+        try {
+          const nomUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(sanitized)}&countrycodes=in&addressdetails=1&limit=5`;
+          const nomRes = await fetch(nomUrl, {
+            headers: { 'Accept-Language': 'en-US,en;q=0.9' },
+          });
+
+          if (nomRes.ok) {
+            const nomData = await nomRes.json();
+            (nomData || []).forEach(item => {
+              if (!apiResults.some(r => Math.abs(parseFloat(r.lat) - parseFloat(item.lat)) < 0.003 && Math.abs(parseFloat(r.lon) - parseFloat(item.lon)) < 0.003)) {
+                apiResults.push(item);
+              }
+            });
+          }
+        } catch (e) {}
+      }
+
+      // Merge local dictionary matches + API results without duplicates
+      const combined = [...localMatches];
+      apiResults.forEach(item => {
+        if (!combined.some(c => Math.abs(parseFloat(c.lat) - parseFloat(item.lat)) < 0.003 && Math.abs(parseFloat(c.lon) - parseFloat(item.lon)) < 0.003)) {
+          combined.push(item);
+        }
+      });
+
+      setSearchResults(combined);
+    }, 250);
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Multi-Strategy Search Area Query (Instant Landmark Dictionary + Acronym Dotted Query + India Nominatim Fallback)
+  // Universal Multi-Engine Search Area Execution (Handles hostels, typos, streets, and areas across all of India)
   const executeAreaSearch = async () => {
     if (!searchQuery.trim()) return;
 
     setIsSearching(true);
     setSearchError('');
 
-    const cleanQuery = searchQuery.trim().toLowerCase();
+    const rawQuery = searchQuery.trim();
+    const sanitized = sanitizeIndianQuery(rawQuery);
 
-    // Strategy 1: Check Famous Indian Landmark Dictionary
+    // Strategy 1: Local Instant Dictionary Lookup
     const matchedLandmark = FAMOUS_INDIAN_LANDMARKS.find((lm) =>
-      lm.keywords.some((kw) => cleanQuery.includes(kw) || kw.includes(cleanQuery))
+      lm.keywords.some((kw) => sanitized.includes(kw) || kw.includes(sanitized) || rawQuery.toLowerCase().includes(kw))
     );
 
     if (matchedLandmark) {
@@ -318,59 +375,71 @@ const FAMOUS_INDIAN_LANDMARKS = [
       return;
     }
 
-    // Strategy 2: Query Nominatim with Dotted Acronym Variations & India Restriction
+    let collectedResults = [];
+
+    // Strategy 2: Photon OpenStreetMap Fuzzy Search Engine (Handles local hostels, shops, buildings, and typos)
     try {
-      const dottedQuery = cleanQuery
-        .replace(/\blj\b/gi, 'L.J.')
-        .replace(/\biim\b/gi, 'I.I.M.')
-        .replace(/\biit\b/gi, 'I.I.T.')
-        .replace(/\baiims\b/gi, 'A.I.I.M.S.');
+      const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(sanitized)}&limit=6&bbox=68.0,8.0,97.0,37.0`;
+      const photonRes = await fetch(photonUrl);
+      if (photonRes.ok) {
+        const photonData = await photonRes.json();
+        if (photonData && photonData.features && photonData.features.length > 0) {
+          photonData.features.forEach(f => {
+            const props = f.properties || {};
+            const coords = f.geometry?.coordinates || [];
+            if (coords.length === 2) {
+              const nameStr = [props.name, props.street, props.district, props.city || props.county, props.state, 'India']
+                .filter(Boolean)
+                .join(', ');
+              collectedResults.push({
+                lat: coords[1],
+                lon: coords[0],
+                display_name: nameStr,
+              });
+            }
+          });
+        }
+      }
+    } catch (e) {}
 
-      const searchQueries = [
-        `${dottedQuery}, India`,
-        `${cleanQuery}, India`,
-        cleanQuery
-      ];
+    // Strategy 3: Query Nominatim with progressive query fallback variations
+    if (collectedResults.length === 0) {
+      try {
+        // Build progressive query variations (e.g., full sanitized, without typos, extracted key words)
+        const searchQueries = [
+          `${sanitized}, India`,
+          `${rawQuery}, India`,
+          sanitized.replace(/ahmedabad|mumbai|delhi|bangalore|hyderabad|chennai|kolkata|pune|vadodara/g, '').trim() + ', India',
+          rawQuery
+        ].filter(Boolean);
 
-      let results = [];
-      for (const q of searchQueries) {
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=in&addressdetails=1&limit=5`;
-        const res = await fetch(url, {
-          headers: { 'Accept-Language': 'en-US,en;q=0.9' },
-        });
+        for (const q of searchQueries) {
+          const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&countrycodes=in&addressdetails=1&limit=5`;
+          const res = await fetch(url, {
+            headers: { 'Accept-Language': 'en-US,en;q=0.9' },
+          });
 
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.length > 0) {
-            results = data;
-            break;
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.length > 0) {
+              collectedResults = data;
+              break;
+            }
           }
         }
+      } catch (err) {
+        console.error('Search area error:', err);
       }
-
-      // Strategy 3: Global Nominatim Fallback
-      if (!results || results.length === 0) {
-        const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&addressdetails=1&limit=5`;
-        const res = await fetch(url, {
-          headers: { 'Accept-Language': 'en-US,en;q=0.9' },
-        });
-        if (res.ok) {
-          results = await res.json();
-        }
-      }
-
-      if (results && results.length > 0) {
-        setSearchResults(results);
-        handleSelectSearchResult(results[0]);
-      } else {
-        setSearchError(`No locations found for "${searchQuery}". Please check the spelling or add your city name (e.g. "${searchQuery}, Ahmedabad").`);
-      }
-    } catch (err) {
-      console.error('Search area error:', err);
-      setSearchError('Unable to perform search. Please check your internet connection.');
-    } finally {
-      setIsSearching(false);
     }
+
+    if (collectedResults && collectedResults.length > 0) {
+      setSearchResults(collectedResults);
+      handleSelectSearchResult(collectedResults[0]);
+    } else {
+      setSearchError(`No locations found for "${searchQuery}". Please check the spelling or enter your city name (e.g. "${searchQuery}, Ahmedabad").`);
+    }
+
+    setIsSearching(false);
   };
 
   const handleSelectSearchResult = (result) => {

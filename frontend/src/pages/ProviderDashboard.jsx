@@ -3,7 +3,6 @@ import api from '../api/axios';
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import InvoiceModal from '../components/InvoiceModal';
 import ConfirmModal from '../components/ConfirmModal';
-import LocationPickerMap from '../components/LocationPickerMap';
 import { Modal } from '../components/Modal';
 
 const INDIAN_CITIES = [
@@ -24,7 +23,6 @@ const ProviderDashboard = () => {
   const [analyticsData, setAnalyticsData] = useState(null);
   const [selectedInvoiceBooking, setSelectedInvoiceBooking] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showLocationMapModal, setShowLocationMapModal] = useState(false);
 
   // Availability state
   const [availabilitySlots, setAvailabilitySlots] = useState([]);
@@ -1781,34 +1779,6 @@ const ProviderDashboard = () => {
             />
           </div>
 
-          {/* User-Friendly Service Location Trigger Card */}
-          <div className="flex flex-col gap-3 pt-3 border-t border-slate-100">
-            <div className="bg-indigo-50/60 border border-indigo-200/80 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-2xs">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-bold shrink-0 shadow-xs">
-                  <span className="material-symbols-outlined text-xl">location_on</span>
-                </div>
-                <div>
-                  <h4 className="text-xs font-extrabold text-slate-900">Service Base Location</h4>
-                  <p className="text-[11px] text-slate-600 font-semibold mt-0.5">
-                    {profile.latitude && profile.longitude
-                      ? '✓ Custom location pinned on map'
-                      : 'Default city location active (Click button to pick exact shop/base on map)'}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setShowLocationMapModal(true)}
-                className="w-full sm:w-auto px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl shadow-md hover:shadow-lg transition-all cursor-pointer flex items-center justify-center gap-1.5 shrink-0"
-              >
-                <span className="material-symbols-outlined text-base">map</span>
-                <span>Select Location on Map</span>
-              </button>
-            </div>
-          </div>
-
           <button 
             type="submit" 
             className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-2xl text-xs font-extrabold shadow-md hover:shadow-xl transition-all cursor-pointer flex items-center justify-center gap-2"
@@ -2043,27 +2013,7 @@ const ProviderDashboard = () => {
         />
       )}
 
-      {/* ── Location Map Picker Modal ── */}
-      {showLocationMapModal && (
-        <Modal
-          isOpen={showLocationMapModal}
-          onClose={() => setShowLocationMapModal(false)}
-          title="Select Service Base Location on Map"
-          maxWidth="max-w-3xl"
-        >
-          <div className="p-1">
-            <LocationPickerMap
-              latitude={profile.latitude}
-              longitude={profile.longitude}
-              onLocationChange={(lat, lng) => setProfile(prev => ({ ...prev, latitude: lat, longitude: lng }))}
-              onConfirm={() => {
-                setShowLocationMapModal(false);
-                showNotification('Location updated! Click "Save Profile Details" to apply.');
-              }}
-            />
-          </div>
-        </Modal>
-      )}
+
 
       {/* Custom Confirm Modal */}
       <ConfirmModal

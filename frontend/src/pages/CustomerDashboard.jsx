@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
 import InvoiceModal from '../components/InvoiceModal';
 import PageTransition from '../components/PageTransition';
-import MapView from '../components/MapView';
-import LocationPickerMap from '../components/LocationPickerMap';
 import { Modal } from '../components/Modal';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Wrench, Calendar, MessageSquare, History, User, LogOut, Star, Search, Filter, Clock, MapPin, CheckCircle, AlertCircle, Map as MapIcon, Grid, Navigation } from 'lucide-react';
+import { LayoutDashboard, Wrench, Calendar, MessageSquare, History, User, LogOut, Star, Search, Filter, Clock, MapPin, CheckCircle, AlertCircle, Grid, Navigation } from 'lucide-react';
 
 const INDIAN_CITIES = [
   "Ahmedabad", "Bangalore", "Bhopal", "Chennai", "Coimbatore", "Delhi",
@@ -22,7 +20,6 @@ const CustomerDashboard = () => {
   const [selectedService, setSelectedService] = useState(null);
   const [selectedInvoiceBooking, setSelectedInvoiceBooking] = useState(null);
   const [providers, setProviders] = useState([]);
-  const [providerViewMode, setProviderViewMode] = useState('grid'); // 'grid' or 'map'
   const [myBookings, setMyBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
@@ -36,7 +33,6 @@ const CustomerDashboard = () => {
   const [problemDescription, setProblemDescription] = useState('');
   const [problemPhoto, setProblemPhoto] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
-  const [showCustomerMapModal, setShowCustomerMapModal] = useState(false);
   const [isDetectingCustomerGps, setIsDetectingCustomerGps] = useState(false);
 
   const handleCustomerGPSDetect = () => {
@@ -765,34 +761,6 @@ const CustomerDashboard = () => {
           <h2 className="font-headline-lg text-headline-lg font-bold text-on-background">
             {selectedService.name} Experts
           </h2>
-
-          {/* Grid vs Map View Mode Switcher */}
-          <div className="flex items-center bg-slate-200/80 p-1 rounded-2xl border border-slate-300/80 shadow-2xs">
-            <button
-              type="button"
-              onClick={() => setProviderViewMode('grid')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                providerViewMode === 'grid'
-                  ? 'bg-white text-indigo-700 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <Grid className="w-3.5 h-3.5" />
-              <span>Grid View</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setProviderViewMode('map')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                providerViewMode === 'map'
-                  ? 'bg-white text-indigo-700 shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900'
-              }`}
-            >
-              <MapPin className="w-3.5 h-3.5" />
-              <span>Map View</span>
-            </button>
-          </div>
         </div>
       </div>
 
@@ -852,7 +820,7 @@ const CustomerDashboard = () => {
         </div>
       </div>
 
-      {/* Providers Render (Grid or Map View) */}
+      {/* Providers Render */}
       <div>
         {searching ? (
           <div className="flex justify-center p-12">
@@ -864,12 +832,6 @@ const CustomerDashboard = () => {
             <h3 className="font-bold text-on-surface">No experts found</h3>
             <p className="text-sm text-on-surface-variant">Try modifying your filter settings or location.</p>
           </div>
-        ) : providerViewMode === 'map' ? (
-          <MapView 
-            providers={providers} 
-            onSelectProvider={(ps) => setBookingProvider(ps)} 
-            selectedCity={location} 
-          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-stack_md">
             {providers.map(ps => (
@@ -1844,16 +1806,7 @@ const CustomerDashboard = () => {
                           className="px-3 py-1.5 bg-white hover:bg-indigo-50 text-indigo-700 font-bold text-xs rounded-xl border border-indigo-300 shadow-2xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 disabled:opacity-50"
                         >
                           <Navigation className={`w-3.5 h-3.5 text-indigo-600 ${isDetectingCustomerGps ? 'animate-spin' : ''}`} />
-                          <span>{isDetectingCustomerGps ? 'Detecting...' : '📍 Use GPS'}</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setShowCustomerMapModal(true)}
-                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
-                        >
-                          <MapPin className="w-3.5 h-3.5 text-white" />
-                          <span>🗺️ Select on Map</span>
+                          <span>{isDetectingCustomerGps ? 'Detecting...' : '📍 Use GPS Location'}</span>
                         </button>
                       </div>
                     </div>
@@ -2592,28 +2545,7 @@ const CustomerDashboard = () => {
         </div>
       )}
 
-      {/* ── Customer Map Location Picker Modal ── */}
-      {showCustomerMapModal && (
-        <Modal
-          isOpen={showCustomerMapModal}
-          onClose={() => setShowCustomerMapModal(false)}
-          title="Select Your Service Delivery Location on Map"
-          maxWidth="max-w-3xl"
-        >
-          <div className="p-1">
-            <LocationPickerMap
-              onLocationChange={(lat, lng, cleanAddress) => {
-                if (cleanAddress) setAddress(cleanAddress);
-              }}
-              onConfirm={(selectedAddress) => {
-                if (selectedAddress) setAddress(selectedAddress);
-                setShowCustomerMapModal(false);
-                showNotification('Service address updated from map!');
-              }}
-            />
-          </div>
-        </Modal>
-      )}
+
 
       {/* ── Invoice Modal ── */}
       {selectedInvoiceBooking && (

@@ -134,17 +134,37 @@ class UserSerializer(serializers.ModelSerializer):
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
-        username = attrs.get(self.username_field)
+        from django.db.models import Q
+        from rest_framework.exceptions import AuthenticationFailed
+
+        identifier = attrs.get(self.username_field)
         password = attrs.get('password')
 
-        if username and password:
-            try:
-                user_obj = CustomUser.objects.get(**{self.username_field: username})
-                if user_obj.check_password(password) and not user_obj.is_active:
-                    from rest_framework.exceptions import AuthenticationFailed
-                    raise AuthenticationFailed(f"Your account (@{user_obj.username}) has been blocked by platform administration. Please contact support.")
-            except CustomUser.DoesNotExist:
-                pass
+        if identifier:
+            # Look up user by username or email
+            user_obj = CustomUser.objects.filter(
+                Q(username=identifier) | Q(email=identifier)
+            ).first()
+
+            if user_obj:
+                # If matched by email, substitute actual username for SimpleJWT standard auth
+                attrs[self.username_field] = user_obj.username
+
+                if password:
+                    if not user_obj.check_password(password):
+                        raise AuthenticationFailed("Invalid password. Please check your credentials and try again.")
+                    
+                    if not user_obj.is_email_verified:
+                        raise AuthenticationFailed({
+                            "detail": "Your email is not verified yet. Please enter the verification OTP code sent to your email address.",
+                            "code": "email_not_verified",
+                            "username": user_obj.username
+                        })
+
+                    if not user_obj.is_active:
+                        raise AuthenticationFailed(f"Your account (@{user_obj.username}) has been deactivated by platform administration. Please contact support.")
+            else:
+                raise AuthenticationFailed("No account found with this username or email address.")
 
         data = super().validate(attrs)
         return data

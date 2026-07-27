@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
+import { parseApiError } from '../api/errorUtils';
 import { BarChart, Bar, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import InvoiceModal from '../components/InvoiceModal';
 import ConfirmModal from '../components/ConfirmModal';
@@ -256,7 +257,26 @@ const ProviderDashboard = () => {
       showNotification('Profile updated successfully!');
     } catch (err) {
       console.error(err);
-      showNotification('Failed to update profile.', 'error');
+      showNotification(parseApiError(err, 'Failed to update profile.'), 'error');
+    }
+  };
+
+  const [isSwitchingRole, setIsSwitchingRole] = useState(false);
+
+  const handleSwitchRole = async (targetRole) => {
+    setIsSwitchingRole(true);
+    try {
+      const response = await api.post('accounts/switch-role/', { target_role: targetRole });
+      localStorage.setItem('access', response.data.access);
+      localStorage.setItem('refresh', response.data.refresh);
+      showNotification(`Account switched to ${targetRole === 'provider' ? 'Service Professional' : 'Customer'}! Redirecting...`);
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+      showNotification(parseApiError(err, 'Failed to switch role.'), 'error');
+      setIsSwitchingRole(false);
     }
   };
 
@@ -274,7 +294,7 @@ const ProviderDashboard = () => {
       showNotification('Image added to gallery!');
     } catch (err) {
       console.error(err);
-      showNotification('Failed to upload image.', 'error');
+      showNotification(parseApiError(err, 'Failed to upload image.'), 'error');
     }
   };
 
@@ -293,7 +313,7 @@ const ProviderDashboard = () => {
           showNotification('Image removed.');
         } catch (err) {
           console.error(err);
-          showNotification('Failed to remove image.', 'error');
+          showNotification(parseApiError(err, 'Failed to remove image.'), 'error');
         } finally {
           setConfirmModalConfig(prev => ({ ...prev, isOpen: false, isLoading: false }));
         }
@@ -324,7 +344,7 @@ const ProviderDashboard = () => {
       showNotification('Service added successfully!');
     } catch (err) {
       console.error(err);
-      showNotification('Failed to add service. You may have already added it.', 'error');
+      showNotification(parseApiError(err, 'Failed to add service.'), 'error');
     }
   };
 
@@ -343,7 +363,7 @@ const ProviderDashboard = () => {
           showNotification('Service removed.');
         } catch (err) {
           console.error(err);
-          showNotification('Failed to delete service.', 'error');
+          showNotification(parseApiError(err, 'Failed to delete service.'), 'error');
         } finally {
           setConfirmModalConfig(prev => ({ ...prev, isOpen: false, isLoading: false }));
         }
@@ -358,7 +378,7 @@ const ProviderDashboard = () => {
       showNotification(`Booking marked as ${newStatus}.`);
     } catch (err) {
       console.error(err);
-      showNotification('Failed to update booking status.', 'error');
+      showNotification(parseApiError(err, 'Failed to update booking status.'), 'error');
     }
   };
 
@@ -374,7 +394,7 @@ const ProviderDashboard = () => {
       setDeclineBookingId(null);
     } catch (err) {
       console.error(err);
-      showNotification('Failed to decline booking.', 'error');
+      showNotification(parseApiError(err, 'Failed to decline booking.'), 'error');
     }
   };
 

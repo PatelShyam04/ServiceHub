@@ -11,7 +11,8 @@ class AccountsTests(APITestCase):
             username="customer1",
             email="customer1@example.com",
             password="testpassword123",
-            is_customer=True
+            is_customer=True,
+            is_email_verified=True
         )
         self.customer_profile = CustomerProfile.objects.create(
             user=self.customer_user,
@@ -23,7 +24,8 @@ class AccountsTests(APITestCase):
             username="provider1",
             email="provider1@example.com",
             password="testpassword123",
-            is_provider=True
+            is_provider=True,
+            is_email_verified=True
         )
         self.provider_profile = ProviderProfile.objects.create(
             user=self.provider_user,
@@ -37,7 +39,8 @@ class AccountsTests(APITestCase):
             username="admin1",
             email="admin1@example.com",
             password="adminpassword123",
-            is_staff=True
+            is_staff=True,
+            is_email_verified=True
         )
 
     def test_register_customer(self):
@@ -86,6 +89,32 @@ class AccountsTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('access', response.data)
         self.assertIn('refresh', response.data)
+
+    def test_obtain_token_with_email(self):
+        url = reverse('token_obtain_pair')
+        data = {
+            "username": "customer1@example.com",
+            "password": "testpassword123"
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('access', response.data)
+
+    def test_obtain_token_unverified_email(self):
+        unverified_user = CustomUser.objects.create_user(
+            username="unverified",
+            email="unverified@example.com",
+            password="testpassword123",
+            is_email_verified=False
+        )
+        url = reverse('token_obtain_pair')
+        data = {
+            "username": "unverified",
+            "password": "testpassword123"
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn("Your email is not verified yet", str(response.data))
 
     def test_get_customer_profile(self):
         self.client.force_authenticate(user=self.customer_user)
@@ -142,3 +171,41 @@ class AccountsTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.provider_profile.refresh_from_db()
         self.assertTrue(self.provider_profile.is_verified)
+
+    from unittest.mock import patch
+
+    @patch('google.oauth2.id_token.verify_oauth2_token')
+    def test_google_login_new_user(self, mock_verify):
+        mock_verify.return_value = {
+            'email': 'googletest@example.com',
+            'given_name': 'Google',
+            'family_name': 'Tester'
+        }
+        url = reverse('google_login')
+        response = self.client.post(url, {'token': 'valid_dummy_token', 'role': 'customer'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('access', response.data)
+        self.assertIn('refresh', response.data)
+        self.assertTrue(CustomUser.objects.filter(email='googletest@example.com').exists())
+
+    @patch('google.oauth2.id_token.verify_oauth2_token')
+    def test_google_login_existing_user(self, mock_verify):
+        unverified_user = CustomUser.objects.create_user(
+            username="unverified_google",
+            email="unverified@example.com",
+            is_active=False,
+            is_email_verified=False
+        )
+        mock_verify.return_value = {
+            'email': 'unverified@example.com',
+            'given_name': 'Unverified',
+            'family_name': 'User'
+        }
+        url = reverse('google_login')
+        response = self.client.post(url, {'token': 'valid_dummy_token'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('access', response.data)
+        unverified_user.refresh_from_db()
+        self.assertTrue(unverified_user.is_active)
+        self.assertTrue(unverified_user.is_email_verified)
+

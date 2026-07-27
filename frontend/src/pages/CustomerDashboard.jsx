@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axios';
+import { parseApiError } from '../api/errorUtils';
 import InvoiceModal from '../components/InvoiceModal';
 import PageTransition from '../components/PageTransition';
 import { Modal } from '../components/Modal';
@@ -290,8 +291,18 @@ const CustomerDashboard = () => {
     e.preventDefault();
     if (isSubmittingBooking) return;
 
+    if (!bookingProvider) {
+      showNotification('Please select a service professional first.', 'error');
+      return;
+    }
+
     if (!bookingDate || !bookingTime) {
-      showNotification('Please select a date and time slot.', 'error');
+      showNotification('Please select a valid date and time slot.', 'error');
+      return;
+    }
+
+    if (!address || !address.trim()) {
+      showNotification('Please enter your service location address.', 'error');
       return;
     }
 
@@ -303,7 +314,7 @@ const CustomerDashboard = () => {
       const formData = new FormData();
       formData.append('provider_service_id', bookingProvider.id);
       formData.append('booking_date', combinedDateTime);
-      formData.append('address', address);
+      formData.append('address', address.trim());
       if (problemDescription) {
         formData.append('problem_description', problemDescription);
       }
@@ -314,7 +325,7 @@ const CustomerDashboard = () => {
       await api.post('services/bookings/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      showNotification('Booking successful!');
+      showNotification('Booking confirmed successfully!');
       setBookingProvider(null);
       setBookingDate('');
       setBookingTime('');
@@ -327,8 +338,7 @@ const CustomerDashboard = () => {
       setActiveTab('Bookings');
     } catch (err) {
       console.error(err);
-      const errDetail = err.response?.data?.non_field_errors?.[0] || err.response?.data?.booking_date?.[0] || 'Failed to book. Please try again.';
-      showNotification(errDetail, 'error');
+      showNotification(parseApiError(err, 'Failed to complete booking. Please try again.'), 'error');
     } finally {
       setIsSubmittingBooking(false);
     }
@@ -346,7 +356,7 @@ const CustomerDashboard = () => {
       setCancelBookingId(null);
     } catch (err) {
       console.error(err);
-      showNotification('Failed to cancel booking.', 'error');
+      showNotification(parseApiError(err, 'Failed to cancel booking.'), 'error');
     }
   };
 
@@ -362,7 +372,26 @@ const CustomerDashboard = () => {
       showNotification('Profile updated successfully!');
     } catch (err) {
       console.error(err);
-      showNotification('Failed to update profile.', 'error');
+      showNotification(parseApiError(err, 'Failed to update profile.'), 'error');
+    }
+  };
+
+  const [isSwitchingRole, setIsSwitchingRole] = useState(false);
+
+  const handleSwitchRole = async (targetRole) => {
+    setIsSwitchingRole(true);
+    try {
+      const response = await api.post('accounts/switch-role/', { target_role: targetRole });
+      localStorage.setItem('access', response.data.access);
+      localStorage.setItem('refresh', response.data.refresh);
+      showNotification(`Account switched to ${targetRole === 'provider' ? 'Service Professional' : 'Customer'}! Redirecting...`);
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+      showNotification(parseApiError(err, 'Failed to switch role.'), 'error');
+      setIsSwitchingRole(false);
     }
   };
 
@@ -381,7 +410,7 @@ const CustomerDashboard = () => {
       fetchData(); // Refresh my bookings
     } catch (err) {
       console.error(err);
-      showNotification(err.response?.data?.non_field_errors?.[0] || 'Failed to submit review.', 'error');
+      showNotification(parseApiError(err, 'Failed to submit review.'), 'error');
     }
   };
 
@@ -1440,7 +1469,7 @@ const CustomerDashboard = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="max-w-[600px] mx-auto">
                 {/* Profile Form */}
                 <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-2xs space-y-5">
                   <div className="flex items-center gap-2">
@@ -1488,36 +1517,6 @@ const CustomerDashboard = () => {
                       Save Changes
                     </button>
                   </form>
-                </div>
-
-                {/* Password Setting Card */}
-                <div className="bg-surface-container-lowest border border-outline-variant/30 rounded-3xl p-6 shadow-2xs space-y-5 flex flex-col justify-between">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-primary text-xl">shield</span>
-                      <h3 className="font-title-md text-title-md font-extrabold text-on-surface">Security & Privacy</h3>
-                    </div>
-                    <p className="text-xs text-on-surface-variant leading-relaxed">
-                      Keep your account credentials safe. Change your password regularly to protect your personal data.
-                    </p>
-                    <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100 space-y-2 text-xs text-indigo-900 font-medium">
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-indigo-600 text-base">check_circle</span>
-                        <span>Password Protection Active</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className="material-symbols-outlined text-indigo-600 text-base">check_circle</span>
-                        <span>Secure JWT Session Tokens</span>
-                      </div>
-                    </div>
-                  </div>
-                  <button 
-                    onClick={() => setShowPasswordModal(true)}
-                    className="w-full py-3 border border-indigo-600/40 text-indigo-700 font-extrabold text-sm rounded-2xl hover:bg-indigo-50 transition-all cursor-pointer shadow-2xs flex items-center justify-center gap-2"
-                  >
-                    <span className="material-symbols-outlined text-lg">lock_reset</span>
-                    Change Password
-                  </button>
                 </div>
               </div>
             </div>

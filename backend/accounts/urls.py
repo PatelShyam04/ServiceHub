@@ -4,7 +4,8 @@ from .views import (
     RegisterView, CustomTokenObtainPairView, ProviderProfileView, CustomerProfileView, 
     ProviderGalleryUploadView, PublicProviderProfileView, ChangePasswordView,
     VerifyEmailAPIView, ResendVerificationCodeAPIView,
-    ForgotPasswordRequestAPIView, ResetPasswordConfirmAPIView
+    ForgotPasswordRequestAPIView, ResetPasswordConfirmAPIView, GoogleLoginAPIView,
+    SwitchRoleAPIView
 )
 from .admin_views import (
     AdminStatsAPIView, AdminProviderListAPIView, AdminProviderVerifyAPIView,
@@ -15,7 +16,11 @@ from .admin_views import (
 
 urlpatterns = [
     path('register/', RegisterView.as_view(), name='register'),
+    path('google-login/', GoogleLoginAPIView.as_view(), name='google_login'),
+    path('switch-role/', SwitchRoleAPIView.as_view(), name='switch_role'),
     path('verify-email/', VerifyEmailAPIView.as_view(), name='verify_email'),
+
+
     path('resend-verification/', ResendVerificationCodeAPIView.as_view(), name='resend_verification'),
     path('forgot-password/', ForgotPasswordRequestAPIView.as_view(), name='forgot_password'),
     path('reset-password/', ResetPasswordConfirmAPIView.as_view(), name='reset_password'),

@@ -240,3 +240,181 @@ class ResetPasswordConfirmAPIView(APIView):
         else:
             return Response({"detail": "Invalid password reset code. Please check and try again."}, status=status.HTTP_400_BAD_REQUEST)
 
+class GoogleLoginAPIView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        import requests
+        import logging
+        from .serializers import CustomTokenObtainPairSerializer
+
+        logger = logging.getLogger(__name__)
+
+        # Support both access_token (useGoogleLogin implicit flow) and credential/token (ID token)
+        access_token = request.data.get('access_token')
+        id_token_str = request.data.get('token') or request.data.get('credential')
+        role = request.data.get('role', 'customer')
+
+        if not access_token and not id_token_str:
+            return Response({"detail": "Google token is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        id_info = None
+        verify_error = None
+
+        # --- Path A: access_token (implicit flow from useGoogleLogin) ---
+        if access_token:
+            try:
+                resp = requests.get(
+                    'https://www.googleapis.com/oauth2/v3/userinfo',
+                    headers={'Authorization': f'Bearer {access_token}'},
+                    timeout=10
+                )
+                if resp.status_code == 200:
+                    id_info = resp.json()
+                else:
+                    verify_error = f"Google userinfo status {resp.status_code}: {resp.text}"
+                    logger.warning(f"Google userinfo failed: {verify_error}")
+            except Exception as e:
+                verify_error = f"HTTP request to Google userinfo failed: {e}"
+                logger.warning(verify_error)
+
+        # --- Path B: ID token (credential from GoogleLogin component) ---
+        if not id_info and id_token_str:
+            # 1. Try google-auth library if available
+            try:
+                from google.oauth2 import id_token as google_id_token
+                from google.auth.transport import requests as google_requests
+                id_info = google_id_token.verify_oauth2_token(id_token_str, google_requests.Request(), clock_skew_in_seconds=10)
+            except ImportError:
+                logger.info("google-auth not installed; falling back to tokeninfo endpoint.")
+            except Exception as e:
+                verify_error = str(e)
+                logger.warning(f"id_token.verify_oauth2_token failed: {e}")
+
+            # 2. Fallback: tokeninfo endpoint
+            if not id_info:
+                try:
+                    resp = requests.get(f'https://oauth2.googleapis.com/tokeninfo?id_token={id_token_str}', timeout=10)
+                    if resp.status_code == 200:
+                        id_info = resp.json()
+                    else:
+                        verify_error = f"Google tokeninfo status {resp.status_code}: {resp.text}"
+                except Exception as e:
+                    verify_error = f"HTTP request to Google tokeninfo failed: {e}"
+
+        if not id_info or not id_info.get('email'):
+            return Response(
+                {"detail": f"Invalid Google token. Details: {verify_error or 'Verification failed'}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            email = id_info.get('email')
+            first_name = id_info.get('given_name', '')
+            last_name = id_info.get('family_name', '')
+
+            user = CustomUser.objects.filter(email__iexact=email).first()
+
+            is_new_user = not bool(user)
+
+            if not user:
+                base_username = email.split('@')[0]
+                username = base_username
+                counter = 1
+                while CustomUser.objects.filter(username=username).exists():
+                    username = f"{base_username}{counter}"
+                    counter += 1
+
+                is_customer = (role != 'provider')
+                is_provider = (role == 'provider')
+
+                user = CustomUser.objects.create_user(
+                    username=username,
+                    email=email,
+                    first_name=first_name,
+                    last_name=last_name,
+                    is_customer=is_customer,
+                    is_provider=is_provider,
+                    is_active=True,
+                    is_email_verified=True
+                )
+                if is_provider:
+                    ProviderProfile.objects.get_or_create(user=user)
+                else:
+                    CustomerProfile.objects.get_or_create(user=user)
+            else:
+                user.is_active = True
+                user.is_email_verified = True
+                if role in ['customer', 'provider']:
+                    if role == 'provider':
+                        user.is_provider = True
+                        user.is_customer = False
+                        ProviderProfile.objects.get_or_create(user=user)
+                    else:
+                        user.is_customer = True
+                        user.is_provider = False
+                        CustomerProfile.objects.get_or_create(user=user)
+                user.save()
+                if user.is_provider and not hasattr(user, 'provider_profile'):
+                    ProviderProfile.objects.get_or_create(user=user)
+                elif user.is_customer and not hasattr(user, 'customer_profile'):
+                    CustomerProfile.objects.get_or_create(user=user)
+
+            actual_role = 'provider' if user.is_provider else 'customer'
+            role_mismatch = False
+
+            refresh = CustomTokenObtainPairSerializer.get_token(user)
+
+            return Response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+                'username': user.username,
+                'email': user.email,
+                'is_customer': user.is_customer,
+                'is_provider': user.is_provider,
+                'is_staff': user.is_staff,
+                'is_new_user': is_new_user,
+                'actual_role': actual_role,
+                'role_mismatch': role_mismatch,
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Error in Google login: {e}", exc_info=True)
+            return Response({"detail": f"Account processing failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class SwitchRoleAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        from .serializers import CustomTokenObtainPairSerializer
+
+        target_role = request.data.get('target_role', '').lower()
+        if target_role not in ['customer', 'provider']:
+            return Response({"detail": "Invalid target role. Must be 'customer' or 'provider'."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+        if target_role == 'provider':
+            user.is_provider = True
+            user.is_customer = False
+            user.save()
+            ProviderProfile.objects.get_or_create(user=user)
+        else:
+            user.is_customer = True
+            user.is_provider = False
+            user.save()
+            CustomerProfile.objects.get_or_create(user=user)
+
+        refresh = CustomTokenObtainPairSerializer.get_token(user)
+
+        return Response({
+            'message': f"Switched role to {target_role} successfully.",
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'is_customer': user.is_customer,
+            'is_provider': user.is_provider,
+            'active_role': target_role
+        }, status=status.HTTP_200_OK)
+
+
+
+
+

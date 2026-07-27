@@ -1,7 +1,11 @@
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your-google-client-id.apps.googleusercontent.com';
 
 // Lazy-loaded pages — each becomes its own chunk, loaded only when visited
+
 const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
 const ProviderDashboard = lazy(() => import('./pages/ProviderDashboard'));
@@ -10,12 +14,12 @@ const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 
 // Enhanced animated loader shown while a page chunk is downloading
 const PageLoader = () => (
-  <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 text-slate-100">
+  <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 text-slate-900">
     <div className="relative flex items-center justify-center">
-      <div className="w-16 h-16 rounded-full border-4 border-indigo-500/20 border-t-indigo-500 animate-spin" />
-      <div className="absolute w-8 h-8 rounded-full border-4 border-emerald-500/20 border-b-emerald-400 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '0.8s' }} />
+      <div className="w-16 h-16 rounded-full border-4 border-indigo-200 border-t-indigo-600 animate-spin" />
+      <div className="absolute w-8 h-8 rounded-full border-4 border-emerald-200 border-b-emerald-500 animate-spin" style={{ animationDirection: 'reverse', animationDuration: '0.8s' }} />
     </div>
-    <span className="mt-4 text-sm font-semibold tracking-wider text-indigo-300 uppercase heading-font">Loading ServiceHub...</span>
+    <span className="mt-4 text-sm font-semibold tracking-wider text-indigo-600 uppercase heading-font">Loading ServiceHub...</span>
   </div>
 );
 
@@ -56,17 +60,20 @@ const ProtectedRoute = () => {
 
 function App() {
   return (
-    <Router>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/" element={<ProtectedRoute />} />
-          <Route path="/admin" element={<ProtectedRoute />} />
-        </Routes>
-      </Suspense>
-    </Router>
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <Router>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/" element={<ProtectedRoute />} />
+            <Route path="/admin" element={<ProtectedRoute />} />
+          </Routes>
+        </Suspense>
+      </Router>
+    </GoogleOAuthProvider>
   );
 }
+
 
 export default App;

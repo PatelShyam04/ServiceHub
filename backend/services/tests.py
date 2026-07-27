@@ -10,12 +10,12 @@ class ServicesTests(APITestCase):
     def setUp(self):
         # Create users
         self.customer_user = CustomUser.objects.create_user(
-            username="customer1", email="cust@test.com", password="password123", is_customer=True, first_name="Cust"
+            username="customer1", email="cust@test.com", password="password123", is_customer=True, first_name="Cust", is_email_verified=True
         )
         self.customer_profile = CustomerProfile.objects.create(user=self.customer_user, phone_number="1234")
 
         self.provider_user = CustomUser.objects.create_user(
-            username="provider1", email="prov@test.com", password="password123", is_provider=True, first_name="Prov"
+            username="provider1", email="prov@test.com", password="password123", is_provider=True, first_name="Prov", is_email_verified=True
         )
         self.provider_profile = ProviderProfile.objects.create(user=self.provider_user, phone_number="5678", city="Mumbai")
 
@@ -193,9 +193,18 @@ class ServicesTests(APITestCase):
             is_available=True
         )
 
-        # Test GET available slots on a Monday date e.g. 2026-07-27
+        from datetime import datetime, time
+        now_local = timezone.localtime()
+        days_ahead = (0 - now_local.weekday()) % 7
+        if days_ahead <= 0:
+            days_ahead += 7
+        future_monday_date = (now_local + timezone.timedelta(days=days_ahead)).date()
+        target_date_str = future_monday_date.strftime('%Y-%m-%d')
+        local_bdt = timezone.make_aware(datetime.combine(future_monday_date, time(9, 0)))
+
+        # Test GET available slots on a Monday date
         url = reverse('available-slots')
-        response = self.client.get(url, {'provider_id': self.provider_profile.id, 'date': '2026-07-27'})
+        response = self.client.get(url, {'provider_id': self.provider_profile.id, 'date': target_date_str})
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('slots', response.data)
         self.assertEqual(len(response.data['slots']), 8) # 9 AM to 5 PM = 8 slots of 1 hr
@@ -205,10 +214,7 @@ class ServicesTests(APITestCase):
         cust2 = CustomUser.objects.create_user(username="customer2", email="cust2@test.com", password="password123", is_customer=True)
         cust2_profile = CustomerProfile.objects.create(user=cust2, phone_number="9999")
 
-        from datetime import datetime
-        local_bdt = timezone.make_aware(datetime(2026, 7, 27, 9, 0, 0))
-
-        # Book 09:00 AM slot for provider on 2026-07-27
+        # Book 09:00 AM slot for provider on target_date_str
         self.client.force_authenticate(user=self.customer_user)
         booking_url = reverse('booking_list_create')
         data = {
@@ -220,7 +226,7 @@ class ServicesTests(APITestCase):
         self.assertEqual(res1.status_code, status.HTTP_201_CREATED)
 
         # Re-fetch available slots and check 09:00 AM is now marked as booked
-        response_after = self.client.get(url, {'provider_id': self.provider_profile.id, 'date': '2026-07-27'})
+        response_after = self.client.get(url, {'provider_id': self.provider_profile.id, 'date': target_date_str})
         self.assertTrue(response_after.data['slots'][0]['is_booked'])
 
         # Attempt double-booking by customer 2 for the exact same slot

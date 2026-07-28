@@ -105,6 +105,11 @@ const ProviderDashboard = () => {
         setAnalyticsData(analyticsRes.data);
       }
       setLoading(false);
+
+      // Auto-direct first time or incomplete profiles to Settings tab
+      if (!profileRes.data.phone_number || !profileRes.data.city || !profileRes.data.skills) {
+        setActiveTab('Profile');
+      }
     } catch (err) {
       console.error('Error fetching data:', err);
       setLoading(false);
@@ -596,6 +601,27 @@ const ProviderDashboard = () => {
 
   const renderDashboard = () => (
     <div className="space-y-stack_lg" style={{ animation: 'fadeInUp 0.4s ease-out' }}>
+      {(!profile.phone_number || !profile.city || !profile.skills) && (
+        <div className="bg-amber-500/10 border-2 border-amber-500/30 text-amber-900 rounded-3xl p-5 md:p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm animate-[fadeIn_0.3s_ease-out]">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-700 shrink-0">
+              <span className="material-symbols-outlined text-2xl">priority_high</span>
+            </div>
+            <div>
+              <h4 className="font-extrabold text-sm text-slate-900">First-Time Setup Required: Complete Your Profile</h4>
+              <p className="text-xs text-slate-600 mt-0.5">Please add your Phone Number, City location, and Primary Skills in Settings below to start receiving job bookings.</p>
+            </div>
+          </div>
+          <button 
+            onClick={() => setActiveTab('Profile')}
+            className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2.5 rounded-xl text-xs font-extrabold cursor-pointer transition-all shadow-md shrink-0 flex items-center gap-1.5"
+          >
+            <span>Complete Profile Now</span>
+            <span className="material-symbols-outlined text-sm">arrow_forward</span>
+          </button>
+        </div>
+      )}
+
       {/* Welcome Banner */}
       <div className="rounded-3xl p-6 md:p-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden text-white shadow-xl"
         style={{ background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)' }}>

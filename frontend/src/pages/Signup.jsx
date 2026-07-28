@@ -31,7 +31,8 @@ const Signup = () => {
       });
       localStorage.setItem('access', res.data.access);
       localStorage.setItem('refresh', res.data.refresh);
-      navigate('/');
+      localStorage.setItem('active_role', role);
+      navigate(role === 'provider' ? '/provider' : '/customer');
     } catch (err) {
       let errorMsg = 'Google sign-in failed. Please try again.';
       if (err.response && err.response.data) {

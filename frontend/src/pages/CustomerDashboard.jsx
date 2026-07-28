@@ -24,6 +24,9 @@ const CustomerDashboard = () => {
   const [myBookings, setMyBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
+  const [showCustomerProfileModal, setShowCustomerProfileModal] = useState(false);
+  const [customerPhoneInput, setCustomerPhoneInput] = useState('');
+  const [isSavingCustomerProfile, setIsSavingCustomerProfile] = useState(false);
   
   const [activeTab, setActiveTab] = useState('Dashboard');
 
@@ -185,10 +188,37 @@ const CustomerDashboard = () => {
       setCategories(catsRes.data);
       setMyBookings(bookingsRes.data);
       setCustomerProfile(profileRes.data);
+      setCustomerPhoneInput(profileRes.data?.phone_number || '');
       setLoading(false);
+
+      if (!profileRes.data?.phone_number) {
+        setShowCustomerProfileModal(true);
+      }
     } catch (err) {
       console.error(err);
       setLoading(false);
+    }
+  };
+
+  const handleSaveCustomerProfile = async (e) => {
+    e.preventDefault();
+    if (!customerPhoneInput.trim()) {
+      showNotification('Please enter a valid contact phone number.', 'error');
+      return;
+    }
+    setIsSavingCustomerProfile(true);
+    try {
+      const res = await api.patch('accounts/customer-profile/', {
+        phone_number: customerPhoneInput.trim()
+      });
+      setCustomerProfile(res.data);
+      setShowCustomerProfileModal(false);
+      showNotification('Customer profile updated successfully!');
+    } catch (err) {
+      console.error(err);
+      showNotification('Failed to update profile.', 'error');
+    } finally {
+      setIsSavingCustomerProfile(false);
     }
   };
 
@@ -2545,6 +2575,52 @@ const CustomerDashboard = () => {
       )}
 
 
+
+      {/* First-Time Customer Profile Completion Modal */}
+      {showCustomerProfileModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md animate-[fadeIn_0.2s_ease-out]">
+          <div className="bg-surface-container-lowest rounded-3xl w-full max-w-md border border-outline-variant/30 shadow-2xl overflow-hidden animate-[scaleUp_0.25s_cubic-bezier(0.16,1,0.3,1)]">
+            <div className="px-6 py-5 bg-gradient-to-r from-indigo-700 via-indigo-800 to-slate-900 text-white flex justify-between items-center">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white shadow-xs">
+                  <span className="material-symbols-outlined text-2xl">person_edit</span>
+                </div>
+                <div>
+                  <h2 className="text-base font-extrabold tracking-tight">Complete Your Customer Profile</h2>
+                  <p className="text-xs text-indigo-200">First-Time Setup Required</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Please enter your contact phone number so service professionals can update you on booking schedules and doorstep arrival.
+              </p>
+              <form onSubmit={handleSaveCustomerProfile} className="space-y-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Contact Phone Number</label>
+                  <input 
+                    type="tel"
+                    value={customerPhoneInput}
+                    onChange={(e) => setCustomerPhoneInput(e.target.value)}
+                    placeholder="e.g. +91 9876543210"
+                    className="rounded-2xl border border-outline-variant/50 p-3.5 text-sm bg-surface-container-lowest focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500 outline-none transition-all"
+                    required
+                  />
+                </div>
+                <button 
+                  type="submit" 
+                  disabled={isSavingCustomerProfile}
+                  className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3.5 rounded-2xl font-extrabold text-sm transition-all cursor-pointer shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-lg">check_circle</span>
+                  <span>{isSavingCustomerProfile ? 'Saving...' : 'Save & Continue'}</span>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Invoice Modal ── */}
       {selectedInvoiceBooking && (

@@ -7,6 +7,15 @@ import PageTransition from '../components/PageTransition';
 import { motion } from 'framer-motion';
 import { Lock, User, Eye, EyeOff, KeyRound, Mail, ArrowRight, CheckCircle2, AlertCircle, ShieldCheck } from 'lucide-react';
 
+// Decode JWT payload without a library
+const parseJwt = (token) => {
+  try {
+    return JSON.parse(atob(token.split('.')[1]));
+  } catch {
+    return null;
+  }
+};
+
 const Login = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -46,14 +55,16 @@ const Login = () => {
       setIsLoading(true);
       setError('');
       try {
+        const chosenRole = selectedRoleRef.current || 'customer';
         const res = await api.post('accounts/google-login/', {
           access_token: tokenResponse.access_token,
-          role: selectedRoleRef.current || 'customer'
+          role: chosenRole
         });
 
         localStorage.setItem('access', res.data.access);
         localStorage.setItem('refresh', res.data.refresh);
-        navigate('/');
+        localStorage.setItem('active_role', chosenRole);
+        navigate(chosenRole === 'provider' ? '/provider' : '/customer');
       } catch (err) {
         setError(parseApiError(err, 'Google sign-in failed. Please try again.'));
       } finally {
@@ -90,7 +101,15 @@ const Login = () => {
       const response = await api.post('accounts/token/', { username, password });
       localStorage.setItem('access', response.data.access);
       localStorage.setItem('refresh', response.data.refresh);
-      navigate('/');
+      // Decode token to check staff/admin status FIRST — always overrides stored role
+      const decoded = parseJwt(response.data.access);
+      if (decoded?.is_staff || decoded?.is_superuser) {
+        localStorage.removeItem('active_role'); // clear any stale provider/customer role
+        navigate('/admin');
+      } else {
+        const activeRole = localStorage.getItem('active_role') || (decoded?.is_provider && !decoded?.is_customer ? 'provider' : 'customer');
+        navigate(activeRole === 'provider' ? '/provider' : '/customer');
+      }
     } catch (err) {
       const parsedMsg = parseApiError(err, 'Login failed. Please check your credentials.');
       setError(parsedMsg);

@@ -116,11 +116,12 @@ class UserSerializer(serializers.ModelSerializer):
         
         if role == 'provider':
             user.is_provider = True
-            ProviderProfile.objects.create(user=user, phone_number=phone_number)
+            user.is_customer = False
+            ProviderProfile.objects.get_or_create(user=user, defaults={'phone_number': phone_number})
         else:
             user.is_customer = True
-            CustomerProfile.objects.create(user=user, phone_number=phone_number)
-            
+            user.is_provider = False
+            CustomerProfile.objects.get_or_create(user=user, defaults={'phone_number': phone_number})
         user.save()
 
         # Send professional OTP HTML verification email
@@ -154,7 +155,11 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
                     if not user_obj.check_password(password):
                         raise AuthenticationFailed("Invalid password. Please check your credentials and try again.")
                     
-                    if not user_obj.is_email_verified:
+                    if user_obj.is_staff or user_obj.is_superuser:
+                        if not user_obj.is_email_verified:
+                            user_obj.is_email_verified = True
+                            user_obj.save(update_fields=['is_email_verified'])
+                    elif not user_obj.is_email_verified:
                         raise AuthenticationFailed({
                             "detail": "Your email is not verified yet. Please enter the verification OTP code sent to your email address.",
                             "code": "email_not_verified",
@@ -174,8 +179,8 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         token = super().get_token(user)
         token['is_customer'] = user.is_customer
         token['is_provider'] = user.is_provider
-        token['is_staff'] = user.is_staff
-        token['is_email_verified'] = user.is_email_verified
+        token['is_staff'] = user.is_staff or user.is_superuser
+        token['is_email_verified'] = user.is_email_verified or user.is_staff or user.is_superuser
         return token
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)

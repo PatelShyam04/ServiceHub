@@ -9,7 +9,12 @@ class CustomerProfileView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
-        return self.request.user.customer_profile
+        user = self.request.user
+        if not user.is_customer:
+            user.is_customer = True
+            user.save(update_fields=['is_customer'])
+        profile, _ = CustomerProfile.objects.get_or_create(user=user)
+        return profile
 
 class RegisterView(generics.CreateAPIView):
     queryset = CustomUser.objects.all()
@@ -24,7 +29,12 @@ class ProviderProfileView(generics.RetrieveUpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self):
-        return self.request.user.provider_profile
+        user = self.request.user
+        if not user.is_provider:
+            user.is_provider = True
+            user.save(update_fields=['is_provider'])
+        profile, _ = ProviderProfile.objects.get_or_create(user=user)
+        return profile
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -328,6 +338,9 @@ class GoogleLoginAPIView(APIView):
                 is_customer = (role != 'provider')
                 is_provider = (role == 'provider')
 
+                is_provider = (role == 'provider')
+                is_customer = (role != 'provider')
+
                 user = CustomUser.objects.create_user(
                     username=username,
                     email=email,
@@ -343,24 +356,28 @@ class GoogleLoginAPIView(APIView):
                 else:
                     CustomerProfile.objects.get_or_create(user=user)
             else:
+                # Existing user — enforce their registered role, do not allow switching
+                if role == 'provider' and not user.is_provider:
+                    return Response({
+                        "detail": f"This Google account is already registered as a Customer. Please sign in as Customer, or create a new account with a different email for a Service Professional account."
+                    }, status=status.HTTP_403_FORBIDDEN)
+
+                if role == 'customer' and not user.is_customer:
+                    return Response({
+                        "detail": f"This Google account is already registered as a Service Professional. Please sign in as Service Professional, or create a new account with a different email for a Customer account."
+                    }, status=status.HTTP_403_FORBIDDEN)
+
                 user.is_active = True
                 user.is_email_verified = True
-                if role in ['customer', 'provider']:
-                    if role == 'provider':
-                        user.is_provider = True
-                        user.is_customer = False
-                        ProviderProfile.objects.get_or_create(user=user)
-                    else:
-                        user.is_customer = True
-                        user.is_provider = False
-                        CustomerProfile.objects.get_or_create(user=user)
                 user.save()
-                if user.is_provider and not hasattr(user, 'provider_profile'):
+                # Ensure their profile exists
+                if user.is_provider:
                     ProviderProfile.objects.get_or_create(user=user)
-                elif user.is_customer and not hasattr(user, 'customer_profile'):
+                else:
                     CustomerProfile.objects.get_or_create(user=user)
 
-            actual_role = 'provider' if user.is_provider else 'customer'
+
+            actual_role = 'provider' if role == 'provider' else ('provider' if user.is_provider and not user.is_customer else 'customer')
             role_mismatch = False
 
             refresh = CustomTokenObtainPairSerializer.get_token(user)
@@ -374,6 +391,7 @@ class GoogleLoginAPIView(APIView):
                 'is_provider': user.is_provider,
                 'is_staff': user.is_staff,
                 'is_new_user': is_new_user,
+                'requested_role': role,
                 'actual_role': actual_role,
                 'role_mismatch': role_mismatch,
             }, status=status.HTTP_200_OK)

@@ -36,25 +36,32 @@ function parseJwt (token) {
   }
 }
 
-const ProtectedRoute = () => {
+const ProtectedRoute = ({ component: Component, adminOnly = false }) => {
   const token = localStorage.getItem('access');
   
   if (!token) {
-    return <Navigate to="/login" />;
+    return <Navigate to="/login" replace />;
   }
 
   const decoded = parseJwt(token);
   
-  if (decoded?.is_staff) {
-    return <AdminDashboard />;
-  }
-  
-  const role = decoded?.is_provider ? 'provider' : 'customer';
-
-  if (role === 'provider') {
-    return <ProviderDashboard />;
+  if (adminOnly && !decoded?.is_staff) {
+    return <Navigate to="/" replace />;
   }
 
+  return <Component />;
+};
+
+const DefaultRedirect = () => {
+  const token = localStorage.getItem('access');
+  if (!token) return <Navigate to="/login" replace />;
+  const decoded = parseJwt(token);
+  // Staff / superuser always goes to Admin — ignore any stored active_role
+  if (decoded?.is_staff || decoded?.is_superuser) return <AdminDashboard />;
+  const activeRole = localStorage.getItem('active_role');
+  if (activeRole === 'provider') return <ProviderDashboard />;
+  if (activeRole === 'customer') return <CustomerDashboard />;
+  if (decoded?.is_provider && !decoded?.is_customer) return <ProviderDashboard />;
   return <CustomerDashboard />;
 };
 
@@ -66,8 +73,11 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="/" element={<ProtectedRoute />} />
-            <Route path="/admin" element={<ProtectedRoute />} />
+            <Route path="/" element={<DefaultRedirect />} />
+            <Route path="/customer" element={<ProtectedRoute component={CustomerDashboard} />} />
+            <Route path="/provider" element={<ProtectedRoute component={ProviderDashboard} />} />
+            <Route path="/admin" element={<ProtectedRoute component={AdminDashboard} adminOnly={true} />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
       </Router>

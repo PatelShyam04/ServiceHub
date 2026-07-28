@@ -194,7 +194,9 @@ class AccountsTests(APITestCase):
             username="unverified_google",
             email="unverified@example.com",
             is_active=False,
-            is_email_verified=False
+            is_email_verified=False,
+            is_customer=True,   # must match the role sent in POST
+            is_provider=False
         )
         mock_verify.return_value = {
             'email': 'unverified@example.com',
@@ -202,10 +204,33 @@ class AccountsTests(APITestCase):
             'family_name': 'User'
         }
         url = reverse('google_login')
-        response = self.client.post(url, {'token': 'valid_dummy_token'}, format='json')
+        response = self.client.post(url, {'token': 'valid_dummy_token', 'role': 'customer'}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn('access', response.data)
         unverified_user.refresh_from_db()
         self.assertTrue(unverified_user.is_active)
         self.assertTrue(unverified_user.is_email_verified)
+
+    @patch('google.oauth2.id_token.verify_oauth2_token')
+    def test_google_login_cross_role_blocked(self, mock_verify):
+        """Existing Customer account should be blocked from logging in as Provider."""
+        CustomUser.objects.create_user(
+            username="cross_role_user",
+            email="crossrole@example.com",
+            is_active=True,
+            is_email_verified=True,
+            is_customer=True,
+            is_provider=False
+        )
+        mock_verify.return_value = {
+            'email': 'crossrole@example.com',
+            'given_name': 'Cross',
+            'family_name': 'Role'
+        }
+        url = reverse('google_login')
+        # Customer account trying to sign in as provider — must be blocked
+        response = self.client.post(url, {'token': 'valid_dummy_token', 'role': 'provider'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertIn('detail', response.data)
+
 

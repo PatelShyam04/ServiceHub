@@ -6,6 +6,7 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || 'your-google-c
 
 // Lazy-loaded pages — each becomes its own chunk, loaded only when visited
 
+const LandingPage = lazy(() => import('./pages/LandingPage'));
 const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
 const ProviderDashboard = lazy(() => import('./pages/ProviderDashboard'));
@@ -54,7 +55,8 @@ const ProtectedRoute = ({ component: Component, adminOnly = false }) => {
 
 const DefaultRedirect = () => {
   const token = localStorage.getItem('access');
-  if (!token) return <Navigate to="/login" replace />;
+  // No token → show the landing page
+  if (!token) return <LandingPage />;
   const decoded = parseJwt(token);
   // Staff / superuser always goes to Admin — ignore any stored active_role
   if (decoded?.is_staff || decoded?.is_superuser) return <AdminDashboard />;
@@ -71,6 +73,7 @@ function App() {
       <Router>
         <Suspense fallback={<PageLoader />}>
           <Routes>
+            <Route path="/landing" element={<LandingPage />} />
             <Route path="/login" element={<Login />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/" element={<DefaultRedirect />} />

@@ -1225,8 +1225,11 @@ const CustomerDashboard = () => {
                   const myFirstName = customerProfile?.first_name || '?';
                   const providerPic = activeBooking?.provider_service_details?.provider_profile_picture;
 
+                  const currentUserId = customerProfile?.user_id || customerProfile?.user;
                   return chatMessages.map(msg => {
-                    const isMe = msg.sender_is_customer;
+                    const senderId = typeof msg.sender === 'object' ? msg.sender?.id : msg.sender;
+                    const isMe = currentUserId && senderId ? (Number(senderId) === Number(currentUserId)) : Boolean(msg.sender_is_customer);
+
                     return (
                       <div key={msg.id} className={`group flex items-end gap-2 w-full ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                         {/* Avatar */}

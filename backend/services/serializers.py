@@ -115,13 +115,26 @@ class ReviewSerializer(serializers.ModelSerializer):
 
 class MessageSerializer(serializers.ModelSerializer):
     sender_name = serializers.CharField(source='sender.first_name', read_only=True)
-    sender_is_provider = serializers.BooleanField(source='sender.is_provider', read_only=True)
-    sender_is_customer = serializers.BooleanField(source='sender.is_customer', read_only=True)
+    sender_is_provider = serializers.SerializerMethodField()
+    sender_is_customer = serializers.SerializerMethodField()
 
     class Meta:
         model = Message
         fields = ('id', 'booking', 'sender', 'sender_name', 'sender_is_provider', 'sender_is_customer', 'content', 'timestamp', 'is_read')
         read_only_fields = ('sender', 'timestamp', 'is_read')
+
+    def get_sender_is_provider(self, obj):
+        try:
+            return obj.sender_id == obj.booking.provider_service.provider.user_id
+        except Exception:
+            return getattr(obj.sender, 'is_provider', False)
+
+    def get_sender_is_customer(self, obj):
+        try:
+            return obj.sender_id == obj.booking.customer.user_id
+        except Exception:
+            return getattr(obj.sender, 'is_customer', False)
+
 
 class NotificationSerializer(serializers.ModelSerializer):
     class Meta:

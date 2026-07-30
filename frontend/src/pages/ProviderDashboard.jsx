@@ -1249,8 +1249,11 @@ const ProviderDashboard = () => {
                   const myFirstName = profile?.first_name || '?';
                   const myPic = profile?.profile_picture;
 
+                  const currentUserId = profile?.user_id || profile?.user;
                   return chatMessages.map(msg => {
-                    const isMe = msg.sender_is_provider;
+                    const senderId = typeof msg.sender === 'object' ? msg.sender?.id : msg.sender;
+                    const isMe = currentUserId && senderId ? (Number(senderId) === Number(currentUserId)) : Boolean(msg.sender_is_provider);
+
                     return (
                       <div key={msg.id} className={`group flex items-end gap-1.5 w-full ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
                         {/* Avatar */}
